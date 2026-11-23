@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AcessaAqui Empresas - Portal Corporativo e Gestão de Acessibilidade</title>
+  
+  <meta name="description" content="Portal corporativo para empresas cadastrarem recursos de acessibilidade, emitirem selos e certificados oficiais de inclusão." />
+  <meta name="theme-color" content="#d97706" />
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Estilos customizados e Acessibilidade -->
+  <link rel="stylesheet" href="../css/styles.css" />
+
+  <style>
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #printable-certificate-area, #printable-certificate-area * {
+        visibility: visible;
+      }
+      #printable-certificate-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      .no-print {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col selection:bg-amber-200">
+
+  <!-- Atalho de acessibilidade WCAG 2.4.1 -->
+  <a href="#main-content" class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-amber-400 focus:text-black focus:font-bold focus:rounded-md focus:shadow-xl">
+    Pular para o conteúdo principal (Alt + 1)
+  </a>
+
+  <!-- Região Live ARIA para avisos a leitores de tela -->
+  <div id="a11y-live-region" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- =============================== CABEÇALHO CORPORATIVO =============================== -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs no-print">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16 sm:h-20 gap-4">
+        
+        <!-- Logo e Título Corporativo -->
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-amber-500 text-white flex items-center justify-center font-black text-xl shadow-md shrink-0" aria-hidden="true">
+            🏢
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900">
+                Acessa<span class="text-amber-600">Empresas</span>
+              </span>
+              <span class="hidden sm:inline-block px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800 rounded-full border border-amber-200">
+                Portal Corporativo
+              </span>
+            </div>
+            <p class="text-xs text-slate-500 hidden md:block">
+              Gestão de Acessibilidade, Selos Oficiais e Certificação NBR 9050
+            </p>
+          </div>
+        </div>
+
+        <!-- Dados da Empresa Logada e Ações -->
+        <div class="flex items-center gap-2 sm:gap-3">
+          
+          <div class="hidden sm:flex flex-col text-right pr-2 border-r border-slate-200">
+            <span id="header-company-name" class="text-xs font-bold text-slate-800 truncate max-w-[200px]">Empresa Cadastrada</span>
+            <span id="header-company-cnpj" class="text-[10px] text-slate-500">CNPJ: Verificado</span>
+          </div>
+
+          <a 
+            href="usuario.html" 
+            class="px-2.5 py-1.5 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold flex items-center gap-1.5 transition"
+            title="Ir para a visão do cliente no mapa"
+          >
+            <span>🗺️</span>
+            <span class="hidden sm:inline">Visão do Cliente</span>
+          </a>
+
+          <a 
+            href="../index.html" 
+            class="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold flex items-center gap-1 transition"
+            title="Sair para a página inicial"
+          >
+            <span>🚪</span>
+            <span class="hidden sm:inline">Sair</span>
+          </a>
+        </div>
+
+      </div>
+
+      <!-- Barra de Navegação Corporativa -->
+      <nav class="flex space-x-2 sm:space-x-4 border-t border-slate-100 overflow-x-auto py-1" role="tablist">
+        <button 
+          type="button" 
+          id="tab-btn-company-register" 
+          role="tab" 
+          aria-selected="true" 
+          class="company-tab-btn py-2.5 px-3 border-b-2 border-amber-600 text-amber-700 font-bold text-xs sm:text-sm whitespace-nowrap flex items-center gap-1.5 transition"
+        >
+          <span>🏢</span>
+          <span>Cadastrar & Gerenciar Locais</span>
+        </button>
+
+        <button 
+          type="button" 
+          id="tab-btn-company-certificate" 
+          role="tab" 
+          aria-selected="false" 
+          class="company-tab-btn py-2.5 px-3 border-b-2 border-transparent text-slate-600 hover:text-amber-600 font-medium text-xs sm:text-sm whitespace-nowrap flex items-center gap-1.5 transition"
+        >
+          <span>🏅</span>
+          <span>Certificado & Adesivo de Vitrine</span>
+        </button>
+
+        <button 
+          type="button" 
+          id="tab-btn-company-reviews" 
+          role="tab" 
+          aria-selected="false" 
+          class="company-tab-btn py-2.5 px-3 border-b-2 border-transparent text-slate-600 hover:text-amber-600 font-medium text-xs sm:text-sm whitespace-nowrap flex items-center gap-1.5 transition"
+        >
+          <span>💬</span>
+          <span>Avaliações & Auditoria</span>
+        </button>
+
+        <button 
+          type="button" 
+          id="tab-btn-company-plans" 
+          role="tab" 
+          aria-selected="false" 
+          class="company-tab-btn py-2.5 px-3 border-b-2 border-transparent text-slate-600 hover:text-amber-600 font-medium text-xs sm:text-sm whitespace-nowrap flex items-center gap-1.5 transition"
+        >
+          <span>💼</span>
+          <span>Planos de Parceria</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- =============================== CONTEÚDO PRINCIPAL =============================== -->
+  <main id="main-content" class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- ==================== ABA 1: CADASTRAR & GERENCIAR ESTABELECIMENTOS ==================== -->
+    <section id="panel-company-register" class="company-tab-panel space-y-8">
+      
+      <!-- Meus Locais Cadastrados -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100">
+          <div>
+            <span class="text-xs font-bold text-amber-600 uppercase tracking-wider">Gestão de Unidades</span>
+            <h2 class="text-xl sm:text-2xl font-black text-slate-900 mt-0.5">Meus Estabelecimentos Cadastrados</h2>
+            <p class="text-xs text-slate-500 mt-1">Locais ativos com recursos de acessibilidade publicados na plataforma</p>
+          </div>
+          <button 
+            type="button" 
+            id="btn-scroll-to-register-form"
+            class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5"
+          >
+            <span>+</span> <span>Cadastrar Nova Unidade</span>
+          </button>
+        </div>
+
+        <div id="company-establishments-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Renderizado dinamicamente via JS -->
+        </div>
+      </div>
+
+      <!-- Formulário de Cadastro / Edição -->
+      <div id="section-register-form" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
+        
+        <div class="mb-6">
+          <span class="text-xs font-bold text-amber-600 uppercase tracking-wider">Novo Cadastro Técnico</span>
+          <h2 class="text-xl sm:text-2xl font-black text-slate-900 mt-1">
+            Cadastrar Recursos de Acessibilidade
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-600 mt-1">
+            Informe com precisão as condições do local. O sistema recalcula automaticamente a pontuação técnica e o nível do selo conforme você marca os itens.
+          </p>
+        </div>
+
+        <!-- Banner com a Prévia Dinâmica do Selo -->
+        <div id="register-badge-preview" class="mb-6">
+          <!-- Atualizado em tempo real pelo JS -->
+        </div>
+
+        <form id="form-register-establishment" class="space-y-6">
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label for="input-reg-name" class="block text-xs font-bold text-slate-700 uppercase mb-1">Nome Comercial da Unidade *</label>
+              <input type="text" id="input-reg-name" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" placeholder="Ex: Cantina & Pizzaria Paulista" />
+            </div>
+
+            <div>
+              <label for="select-reg-category" class="block text-xs font-bold text-slate-700 uppercase mb-1">Categoria Principal *</label>
+              <select id="select-reg-category" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white">
+                <option value="Restaurante / Café">Restaurante / Café / Bar</option>
+                <option value="Cultura / Teatro">Cultura / Teatro / Museu / Cinema</option>
+                <option value="Saúde / Clínica">Saúde / Hospital / Clínica / Laboratório</option>
+                <option value="Lazer / Parque">Lazer / Parque / Praça</option>
+                <option value="Comércio / Supermercado">Comércio / Supermercado / Shopping</option>
+                <option value="Hotelaria / Turismo">Hotelaria / Pousada / Turismo</option>
+                <option value="Educação / Escola">Educação / Escola / Universidade</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="md:col-span-2">
+              <label for="input-reg-address" class="block text-xs font-bold text-slate-700 uppercase mb-1">Endereço Completo *</label>
+              <input type="text" id="input-reg-address" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" placeholder="Ex: Av. Paulista, 1500 - Bela Vista" />
+            </div>
+
+            <div>
+              <label for="input-reg-city" class="block text-xs font-bold text-slate-700 uppercase mb-1">Cidade / Estado *</label>
+              <input type="text" id="input-reg-city" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" value="São Paulo" placeholder="Cidade" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label for="input-reg-phone" class="block text-xs font-bold text-slate-700 uppercase mb-1">Telefone Fixo</label>
+              <input type="text" id="input-reg-phone" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" placeholder="(11) 3344-5566" />
+            </div>
+
+            <div>
+              <label for="input-reg-whatsapp" class="block text-xs font-bold text-slate-700 uppercase mb-1">WhatsApp de Atendimento</label>
+              <input type="text" id="input-reg-whatsapp" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" placeholder="(11) 98765-4321" />
+            </div>
+
+            <div>
+              <label for="select-reg-plan" class="block text-xs font-bold text-slate-700 uppercase mb-1">Plano de Parceria</label>
+              <select id="select-reg-plan" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white">
+                <option value="Gratuito">Básico Gratuito (Selo Padrão)</option>
+                <option value="Empresa Inclusiva Prata">Prata (Destaque nas Buscas)</option>
+                <option value="Empresa Inclusiva Ouro">Ouro (Consultoria e Treinamento)</option>
+                <option value="Empresa Inclusiva Diamante">Diamante (Certificação de Excelência)</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label for="textarea-reg-description" class="block text-xs font-bold text-slate-700 uppercase mb-1">Descrição e Diferenciais Inclusivos *</label>
+            <textarea id="textarea-reg-description" rows="3" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" placeholder="Conte aos clientes sobre as facilidades, rampas, treinamento da equipe em Libras e acolhimento."></textarea>
+          </div>
+
+          <!-- Checklist de Itens de Acessibilidade -->
+          <div class="pt-4 border-t border-slate-200">
+            <h3 class="text-sm font-black text-slate-900 mb-1">
+              Recursos de Acessibilidade Disponíveis no Local (ABNT NBR 9050)
+            </h3>
+            <p class="text-xs text-slate-500 mb-4">
+              Marque os itens implementados para calcular a pontuação de certificação:
+            </p>
+
+            <div id="register-features-checklist">
+              <!-- Renderizado dinamicamente via JS -->
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+            <button type="reset" class="px-4 py-2 border border-slate-300 text-slate-700 font-semibold text-xs rounded-lg hover:bg-slate-50">
+              Limpar Campos
+            </button>
+            <button type="submit" class="px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm rounded-lg shadow transition">
+              Salvar e Publicar Unidade
+            </button>
+          </div>
+
+        </form>
+
+      </div>
+
+    </section>
+
+    <!-- ==================== ABA 2: CERTIFICADO & ADESIVO DE VITRINE ==================== -->
+    <section id="panel-company-certificate" class="company-tab-panel hidden space-y-6">
+      
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 no-print">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <span class="text-xs font-bold text-amber-600 uppercase tracking-wider">Documento Oficial & Reconhecimento</span>
+            <h2 class="text-xl sm:text-2xl font-black text-slate-900 mt-0.5">Emissão de Certificado e Selo de Vitrine</h2>
+            <p class="text-xs text-slate-500 mt-1">Gere o certificado para emoldurar ou imprima o adesivo com QR Code para a porta de entrada</p>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <select id="select-certificate-establishment" class="text-xs px-3 py-2 border border-slate-300 rounded-lg bg-white">
+              <!-- Preenchido via JS -->
+            </select>
+
+            <button 
+              type="button" 
+              onclick="window.print()" 
+              class="px-4 py-2 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-lg shadow transition flex items-center gap-1.5"
+            >
+              <span>🖨️</span> <span>Imprimir / Salvar PDF</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ÁREA IMPRIMÍVEL DO CERTIFICADO -->
+      <div id="printable-certificate-area" class="bg-white rounded-2xl border-4 border-amber-600 shadow-xl p-8 sm:p-12 relative overflow-hidden max-w-4xl mx-auto">
+        
+        <!-- Moldura decorativa -->
+        <div class="border-2 border-amber-400 p-6 sm:p-8 rounded-xl relative">
+          
+          <div class="text-center pb-6 border-b border-slate-200">
+            <div class="text-xs font-bold text-slate-500 uppercase tracking-widest">República Federativa do Brasil</div>
+            <div class="text-xs text-slate-400">Programa Nacional de Inclusão e Acessibilidade • Lei nº 13.146/2015</div>
+            <h1 class="text-2xl sm:text-3xl font-black text-slate-900 mt-3 uppercase tracking-tight">
+              Certificado Oficial de Acessibilidade
+            </h1>
+          </div>
+
+          <div class="py-8 text-center space-y-4">
+            <p class="text-sm text-slate-600">Certificamos com base em critérios técnicos da norma <strong>ABNT NBR 9050</strong> que o estabelecimento:</p>
+            
+            <div id="cert-establishment-name" class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              Café & Livraria Harmonia Inclusiva
+            </div>
+
+            <p id="cert-establishment-address" class="text-xs text-slate-500">
+              Av. Paulista, 1578 - Bela Vista, São Paulo - SP
+            </p>
+
+            <!-- Selo Oficial -->
+            <div class="pt-4 flex flex-col items-center justify-center">
+              <div id="cert-badge-box" class="px-6 py-3 rounded-2xl text-white badge-ouro shadow-lg inline-flex items-center gap-3">
+                <span id="cert-badge-icon" class="text-3xl">🥇</span>
+                <div class="text-left">
+                  <div class="text-[10px] uppercase font-bold tracking-widest opacity-90">Classificação Atingida</div>
+                  <div id="cert-badge-tier-name" class="text-lg font-black leading-tight">Selo Ouro - Inclusão Plena</div>
+                </div>
+              </div>
+            </div>
+
+            <p class="text-xs text-slate-600 max-w-xl mx-auto leading-relaxed pt-2">
+              Demonstrou compromisso efetivo com a remoção de barreiras arquitetônicas, sanitárias e comunicacionais, assegurando autonomia e dignidade no atendimento às pessoas com deficiência.
+            </p>
+          </div>
+
+          <!-- Rodapé do Certificado com QR Code simulado -->
+          <div class="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
+            <div class="flex items-center gap-3">
+              <div class="w-16 h-16 bg-slate-900 text-white rounded-lg flex items-center justify-center text-[10px] font-mono font-bold leading-tight text-center p-1 border">
+                QR CODE VERIFICAÇÃO
+              </div>
+              <div class="text-[11px] text-slate-500">
+                <div>Código de Autenticidade: <strong class="text-slate-800" id="cert-auth-code">ACC-2026-9812</strong></div>
+                <div>Emissão: <span id="cert-date-issue">09/11/2026</span> • Validade: 12 meses</div>
+              </div>
+            </div>
+
+            <div class="text-center sm:text-right text-[11px] text-slate-500">
+              <div class="font-bold text-slate-800">Comitê de Avaliação & Parcerias</div>
+              <div>AcessaAqui • Plataforma Digital de Inclusão</div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ==================== ABA 3: AVALIAÇÕES & AUDITORIA ==================== -->
+    <section id="panel-company-reviews" class="company-tab-panel hidden space-y-6">
+      
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
+        <div class="mb-6 pb-4 border-b border-slate-100 flex items-center justify-between">
+          <div>
+            <span class="text-xs font-bold text-amber-600 uppercase tracking-wider">Transparência Comunitária</span>
+            <h2 class="text-xl sm:text-2xl font-black text-slate-900 mt-0.5">Avaliações & Avisos dos Clientes</h2>
+            <p class="text-xs text-slate-500 mt-1">Acompanhe a satisfação das pessoas com deficiência que visitaram suas unidades</p>
+          </div>
+          <span class="px-3 py-1 bg-emerald-50 text-emerald-800 text-xs font-bold rounded-full border border-emerald-200">
+            ✓ Rede Colaborativa Ativa
+          </span>
+        </div>
+
+        <div id="company-feedback-list" class="space-y-3">
+          <!-- Inserido dinamicamente via JS -->
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ==================== ABA 4: PLANOS DE PARCERIA ==================== -->
+    <section id="panel-company-plans" class="company-tab-panel hidden space-y-6">
+      
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 text-center max-w-4xl mx-auto">
+        <span class="text-xs font-bold text-amber-600 uppercase tracking-widest">Sustentabilidade & Expansão</span>
+        <h2 class="text-2xl sm:text-3xl font-black text-slate-900 mt-1">Planos de Apoio e Certificação Empresarial</h2>
+        <p class="text-xs sm:text-sm text-slate-600 mt-2 max-w-2xl mx-auto">
+          O cadastro básico é sempre gratuito. Os planos corporativos viabilizam o projeto e oferecem consultoria especializada para sua empresa se destacar no mercado inclusivo.
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8 text-left">
+          
+          <!-- Básico Gratuito -->
+          <div class="p-6 rounded-2xl border border-slate-200 bg-slate-50 flex flex-col justify-between">
+            <div>
+              <span class="text-xs font-bold text-slate-500 uppercase">Gratuito</span>
+              <h3 class="text-xl font-black text-slate-900 mt-1">Básico Inclusivo</h3>
+              <div class="text-2xl font-black text-slate-900 my-3">R$ 0 <span class="text-xs font-normal text-slate-500">/ sempre</span></div>
+              <ul class="text-xs space-y-2 text-slate-600">
+                <li>✓ Cadastro completo no mapa interativo</li>
+                <li>✓ Cálculo de pontuação e selo</li>
+                <li>✓ Emissão de certificado digital</li>
+                <li>✓ Recebimento de avaliações</li>
+              </ul>
+            </div>
+            <button type="button" class="mt-6 w-full py-2 bg-slate-200 text-slate-700 font-bold text-xs rounded-lg" disabled>Plano Atual Ativo</button>
+          </div>
+
+          <!-- Prata / Ouro -->
+          <div class="p-6 rounded-2xl border-2 border-amber-500 bg-amber-50/30 flex flex-col justify-between shadow-md relative">
+            <span class="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-500 text-white text-[10px] uppercase font-black px-3 py-0.5 rounded-full shadow">Recomendado</span>
+            <div>
+              <span class="text-xs font-bold text-amber-600 uppercase">Empresas Médias</span>
+              <h3 class="text-xl font-black text-slate-900 mt-1">Inclusão Ouro</h3>
+              <div class="text-2xl font-black text-amber-700 my-3">R$ 149 <span class="text-xs font-normal text-slate-500">/ mês</span></div>
+              <ul class="text-xs space-y-2 text-slate-600">
+                <li>✓ <strong>Destaque no topo</strong> das pesquisas regionais</li>
+                <li>✓ Adesivo de vitrine físico com QR Code enviado pelo correio</li>
+                <li>✓ Treinamento online de atendimento em Libras</li>
+                <li>✓ Relatório diagnóstico de acessibilidade</li>
+              </ul>
+            </div>
+            <button type="button" class="mt-6 w-full py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-lg transition shadow">Contratar Plano Ouro</button>
+          </div>
+
+          <!-- Diamante Corporativo -->
+          <div class="p-6 rounded-2xl border border-sky-400 bg-sky-50/30 flex flex-col justify-between">
+            <div>
+              <span class="text-xs font-bold text-sky-700 uppercase">Grandes Redes & Redes Hoteleiras</span>
+              <h3 class="text-xl font-black text-slate-900 mt-1">Excelência ESG</h3>
+              <div class="text-2xl font-black text-sky-800 my-3">R$ 390 <span class="text-xs font-normal text-slate-500">/ mês</span></div>
+              <ul class="text-xs space-y-2 text-slate-600">
+                <li>✓ Auditoria técnica presencial ABNT NBR 9050</li>
+                <li>✓ Certificado ESG oficial para investidores</li>
+                <li>✓ Suporte prioritário para remoção de barreiras</li>
+                <li>✓ Capacitação contínua da equipe</li>
+              </ul>
+            </div>
+            <button type="button" class="mt-6 w-full py-2 bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs rounded-lg transition shadow">Falar com Consultor</button>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ======================== RODAPÉ AUTO-OCULTÁVEL AO ROLAR ======================== -->
+  <footer id="company-footer" class="footer-auto-hide fixed bottom-0 left-0 right-0 z-30 bg-slate-900 text-slate-300 py-3 border-t border-slate-800 shadow-xl transition-all duration-300 no-print">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-xs flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="font-bold text-white">🏢 AcessaAqui Empresas</span>
+        <span class="text-slate-400">• Painel de Governança de Acessibilidade</span>
+      </div>
+      <div class="text-slate-400 text-[11px]">
+        Oculta automaticamente ao rolar
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script type="module">
+    import { 
+      getEstablishments, 
+      addEstablishment, 
+      getReviews,
+      getBarriers
+    } from '../js/data.js';
+
+    import { 
+      ACCESSIBILITY_FEATURES, 
+      calculateAccessibilityScore,
+      BADGE_TIERS
+    } from '../js/certification.js';
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // Carrega dados da sessão da empresa
+      const rawSession = localStorage.getItem('acessa_empresa_sessao_v1');
+      const companySession = rawSession ? JSON.parse(rawSession) : {
+        name: 'Café & Livraria Harmonia Inclusiva',
+        cnpj: '12.345.678/0001-90',
+        email: 'contato@empresa.com.br'
+      };
+
+      const nameEl = document.getElementById('header-company-name');
+      const cnpjEl = document.getElementById('header-company-cnpj');
+      if (nameEl) nameEl.textContent = companySession.name;
+      if (cnpjEl) cnpjEl.textContent = `CNPJ: ${companySession.cnpj || 'Cadastrado'}`;
+
+      // ==================== NAVEGAÇÃO DE ABAS ==================== //
+      const tabBtns = document.querySelectorAll('.company-tab-btn');
+      const tabPanels = document.querySelectorAll('.company-tab-panel');
+
+      const switchCompanyTab = (targetId) => {
+        tabPanels.forEach(p => p.classList.add('hidden'));
+        document.getElementById(`panel-${targetId}`)?.classList.remove('hidden');
+
+        tabBtns.forEach(b => {
+          const isTarget = b.id === `tab-btn-${targetId}`;
+          b.setAttribute('aria-selected', String(isTarget));
+          if (isTarget) {
+            b.classList.add('border-amber-600', 'text-amber-700', 'font-bold');
+            b.classList.remove('border-transparent', 'text-slate-600');
+          } else {
+            b.classList.remove('border-amber-600', 'text-amber-700', 'font-bold');
+            b.classList.add('border-transparent', 'text-slate-600');
+          }
+        });
+      };
+
+      document.getElementById('tab-btn-company-register')?.addEventListener('click', () => switchCompanyTab('company-register'));
+      document.getElementById('tab-btn-company-certificate')?.addEventListener('click', () => switchCompanyTab('company-certificate'));
+      document.getElementById('tab-btn-company-reviews')?.addEventListener('click', () => switchCompanyTab('company-reviews'));
+      document.getElementById('tab-btn-company-plans')?.addEventListener('click', () => switchCompanyTab('company-plans'));
+
+      document.getElementById('btn-scroll-to-register-form')?.addEventListener('click', () => {
+        document.getElementById('section-register-form')?.scrollIntoView({ behavior: 'smooth' });
+      });
+
+      // ==================== RENDERIZAÇÃO DOS ESTABELECIMENTOS DA EMPRESA ==================== //
+      const renderCompanyUnits = () => {
+        const list = getEstablishments();
+        const container = document.getElementById('company-establishments-list');
+        const selectCert = document.getElementById('select-certificate-establishment');
+
+        if (container) {
+          container.innerHTML = list.map(est => {
+            const tier = est.scoreData?.tier || BADGE_TIERS.INICIANTE;
+            return `
+              <div class="p-4 rounded-xl border border-slate-200 bg-slate-50 flex flex-col justify-between hover:shadow-md transition">
+                <div>
+                  <div class="flex items-start justify-between gap-2 mb-2">
+                    <span class="text-xs font-bold text-amber-700">${est.category}</span>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold text-white ${tier.badgeClass}">${tier.name.split(' - ')[0]}</span>
+                  </div>
+                  <h4 class="font-bold text-slate-900 text-sm mb-1">${est.name}</h4>
+                  <p class="text-xs text-slate-500 mb-2">📍 ${est.address}</p>
+                  <div class="text-xs font-semibold text-slate-700">★ ${est.rating.toFixed(1)} (${est.reviewsCount} avaliações)</div>
+                </div>
+                <div class="mt-4 pt-3 border-t border-slate-200 flex items-center justify-between text-xs">
+                  <span class="text-slate-500 font-mono">${est.scoreData?.score || 0} pts</span>
+                  <button type="button" class="text-amber-700 font-bold hover:underline btn-emit-cert" data-est-id="${est.id}">
+                    Emitir Certificado →
+                  </button>
+                </div>
+              </div>
+            `;
+          }).join('');
+
+          container.querySelectorAll('.btn-emit-cert').forEach(btn => {
+            btn.addEventListener('click', () => {
+              const estId = btn.getAttribute('data-est-id');
+              if (selectCert) selectCert.value = estId;
+              loadCertificateForEstablishment(estId);
+              switchCompanyTab('company-certificate');
+            });
+          });
+        }
+
+        if (selectCert) {
+          selectCert.innerHTML = list.map(est => `
+            <option value="${est.id}">${est.name}</option>
+          `).join('');
+
+          selectCert.addEventListener('change', (e) => {
+            loadCertificateForEstablishment(e.target.value);
+          });
+
+          if (list.length > 0) {
+            loadCertificateForEstablishment(list[0].id);
+          }
+        }
+      };
+
+      // ==================== CHECKLIST DE ACESSIBILIDADE & PRÉVIA DO SELO ==================== //
+      const checklistContainer = document.getElementById('register-features-checklist');
+      if (checklistContainer) {
+        const categoriesMap = {
+          fisica: '♿ Acessibilidade Arquitetônica e Estrutural',
+          sanitario: '🚾 Sanitários e Mobiliário',
+          visual: '👁️ Recursos Visuais e Cão-Guia',
+          auditiva: '🤟 Comunicação e Libras',
+          cognitiva: '🧠 Acolhimento Neurodivergente'
+        };
+
+        let html = '';
+        Object.entries(categoriesMap).forEach(([catKey, catTitle]) => {
+          const catFeats = Object.values(ACCESSIBILITY_FEATURES).filter(f => f.category === catKey);
+          html += `
+            <div class="mb-4">
+              <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wide mb-2">${catTitle}</h4>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                ${catFeats.map(feat => `
+                  <label class="cursor-pointer p-2.5 rounded-lg border border-slate-200 hover:border-amber-400 hover:bg-slate-50 transition flex items-start gap-2.5 text-xs">
+                    <input 
+                      type="checkbox" 
+                      name="register_feature" 
+                      value="${feat.id}" 
+                      class="mt-0.5 h-4 w-4 rounded text-amber-600 focus:ring-amber-500 feature-checkbox-calc"
+                    />
+                    <div>
+                      <span class="font-bold text-slate-900 block">${feat.label}</span>
+                      <span class="text-[11px] text-slate-500">${feat.description} (+${feat.points} pts)</span>
+                    </div>
+                  </label>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        });
+        checklistContainer.innerHTML = html;
+
+        checklistContainer.addEventListener('change', () => updateBadgePreview());
+      }
+
+      const updateBadgePreview = () => {
+        const checked = Array.from(document.querySelectorAll('input[name="register_feature"]:checked')).map(el => el.value);
+        const scoreData = calculateAccessibilityScore(checked);
+        const previewEl = document.getElementById('register-badge-preview');
+
+        if (previewEl) {
+          previewEl.innerHTML = `
+            <div class="p-4 rounded-xl text-white ${scoreData.tier.badgeClass} flex items-center justify-between shadow-md transition-all">
+              <div>
+                <div class="text-[11px] uppercase tracking-wider font-semibold opacity-90">Classificação Atingida</div>
+                <div class="text-lg font-black">${scoreData.tier.name}</div>
+                <p class="text-xs opacity-90 mt-0.5">${scoreData.tier.description}</p>
+              </div>
+              <div class="text-right pl-4">
+                <div class="text-2xl font-black">${scoreData.score} pts</div>
+                <div class="text-[10px] uppercase font-semibold">${scoreData.percentage}% de conformidade</div>
+              </div>
+            </div>
+          `;
+        }
+      };
+
+      updateBadgePreview();
+
+      // Submissão do Formulário de Cadastro
+      document.getElementById('form-register-establishment')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const name = document.getElementById('input-reg-name').value.trim();
+        const category = document.getElementById('select-reg-category').value;
+        const address = document.getElementById('input-reg-address').value.trim();
+        const city = document.getElementById('input-reg-city').value.trim();
+        const phone = document.getElementById('input-reg-phone').value.trim();
+        const whatsapp = document.getElementById('input-reg-whatsapp').value.trim();
+        const plan = document.getElementById('select-reg-plan').value;
+        const description = document.getElementById('textarea-reg-description').value.trim();
+
+        const checkedFeatures = Array.from(document.querySelectorAll('input[name="register_feature"]:checked')).map(el => el.value);
+
+        const newEst = addEstablishment({
+          name,
+          category,
+          address,
+          city,
+          state: 'SP',
+          phone,
+          whatsapp,
+          partnershipPlan: plan,
+          description,
+          features: checkedFeatures,
+          lat: -23.561414 + (Math.random() - 0.5) * 0.02,
+          lng: -46.655881 + (Math.random() - 0.5) * 0.02,
+          image: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=800&q=80'
+        });
+
+        alert(`Unidade "${newEst.name}" cadastrada com sucesso! Certificação emitida: ${newEst.scoreData?.tier?.name}.`);
+        document.getElementById('form-register-establishment').reset();
+        updateBadgePreview();
+        renderCompanyUnits();
+      });
+
+      // ==================== CARREGAMENTO DO CERTIFICADO ==================== //
+      const loadCertificateForEstablishment = (estId) => {
+        const all = getEstablishments();
+        const est = all.find(e => e.id === estId) || all[0];
+        if (!est) return;
+
+        const tier = est.scoreData?.tier || BADGE_TIERS.INICIANTE;
+
+        document.getElementById('cert-establishment-name').textContent = est.name;
+        document.getElementById('cert-establishment-address').textContent = `${est.address} - ${est.city}/${est.state}`;
+        document.getElementById('cert-badge-tier-name').textContent = tier.name;
+
+        const badgeBox = document.getElementById('cert-badge-box');
+        if (badgeBox) {
+          badgeBox.className = `px-6 py-3 rounded-2xl text-white ${tier.badgeClass} shadow-lg inline-flex items-center gap-3`;
+        }
+
+        const iconsMap = { diamante: '💎', ouro: '🥇', prata: '🥈', bronze: '🥉', iniciante: '⏳' };
+        document.getElementById('cert-badge-icon').textContent = iconsMap[tier.id] || '🏅';
+        document.getElementById('cert-auth-code').textContent = `ACC-${new Date().getFullYear()}-${est.id.slice(-4).toUpperCase()}`;
+        document.getElementById('cert-date-issue').textContent = new Date().toLocaleDateString('pt-BR');
+      };
+
+      // ==================== AVALIAÇÕES E FEEDBACKS ==================== //
+      const renderFeedbacks = () => {
+        const reviews = getReviews();
+        const barriers = getBarriers();
+        const container = document.getElementById('company-feedback-list');
+
+        if (container) {
+          let html = '';
+
+          if (barriers.length > 0) {
+            html += `
+              <div class="mb-4">
+                <h4 class="text-xs font-bold text-amber-900 uppercase tracking-wider mb-2">⚠️ Avisos e Barreiras Relatadas pelos Clientes:</h4>
+                <div class="space-y-2">
+                  ${barriers.map(b => `
+                    <div class="p-3 bg-amber-50 border border-amber-300 rounded-xl text-xs flex items-start justify-between gap-3">
+                      <div>
+                        <div class="font-bold text-amber-900">${b.title}</div>
+                        <p class="text-amber-800 mt-0.5">${b.description}</p>
+                        <div class="text-[10px] text-amber-700 mt-1">Reportado por ${b.author} em ${b.date}</div>
+                      </div>
+                      <span class="px-2 py-0.5 bg-amber-200 text-amber-900 rounded font-bold text-[10px] uppercase">Em atenção</span>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            `;
+          }
+
+          html += `
+            <div>
+              <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Relatos e Notas Recebidas:</h4>
+              <div class="space-y-2">
+                ${reviews.map(r => `
+                  <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs">
+                    <div class="flex items-center justify-between mb-1">
+                      <span class="font-bold text-slate-800">${r.author} <span class="font-normal text-slate-500">(${r.authorRole})</span></span>
+                      <span class="text-amber-500 font-bold">${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</span>
+                    </div>
+                    <p class="text-slate-600">"${r.comment}"</p>
+                    <div class="text-[10px] text-slate-400 mt-1">${r.date}</div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+
+          container.innerHTML = html;
+        }
+      };
+
+      // ==================== RODAPÉ AUTO-OCULTÁVEL AO ROLAR ==================== //
+      const footer = document.getElementById('company-footer');
+      let lastScrollY = window.scrollY;
+
+      window.addEventListener('scroll', () => {
+        const currentScrollY = window.scrollY;
+        if (currentScrollY > lastScrollY && currentScrollY > 60) {
+          footer?.classList.add('footer-hidden');
+        } else {
+          footer?.classList.remove('footer-hidden');
+        }
+        if ((window.innerHeight + window.scrollY) >= (document.documentElement.scrollHeight - 30)) {
+          footer?.classList.remove('footer-hidden');
+        }
+        lastScrollY = currentScrollY;
+      }, { passive: true });
+
+      // Inicializa
+      renderCompanyUnits();
+      renderFeedbacks();
+    });
+  </script>
+
+</body>
+</html>
+

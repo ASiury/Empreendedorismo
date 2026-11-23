@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AcessaAqui - Plataforma Digital de Inclusão e Acessibilidade</title>
+  
+  <!-- Meta tags de acessibilidade e SEO -->
+  <meta name="description" content="Plataforma colaborativa para localização e identificação de estabelecimentos e serviços acessíveis para pessoas com deficiência ou mobilidade reduzida." />
+  <meta name="theme-color" content="#2563eb" />
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              800: '#1e40af',
+              900: '#1e3a8a'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Leaflet.js para Mapa Interativo -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <!-- Estilos customizados e Acessibilidade -->
+  <link rel="stylesheet" href="../css/styles.css" />
+</head>
+<body class="flex flex-col h-screen overflow-hidden text-slate-800 antialiased selection:bg-blue-200">
+
+  <!-- Link de atalho para acessibilidade (WCAG 2.4.1) -->
+  <a href="#main-content" class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-amber-400 focus:text-black focus:font-bold focus:rounded-md focus:shadow-xl">
+    Pular para o conteúdo principal (Alt + 1)
+  </a>
+
+  <!-- Região Live ARIA para avisos a leitores de tela -->
+  <div id="a11y-live-region" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- =============================== CABEÇALHO PRINCIPAL =============================== -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16 sm:h-20 gap-4">
+        
+        <!-- Logo e Título -->
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-xl shadow-md shrink-0" aria-hidden="true">
+            ♿
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900">
+                Acessa<span class="text-blue-600">Aqui</span>
+              </span>
+              <span class="hidden sm:inline-block px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 rounded-full border border-emerald-200">
+                Inclusão Ativa
+              </span>
+            </div>
+            <p class="text-xs text-slate-500 hidden md:block">
+              Guia Colaborativo de Estabelecimentos e Serviços Acessíveis
+            </p>
+          </div>
+        </div>
+
+        <!-- Barra de Ferramentas de Acessibilidade Rápida no Topo -->
+        <div class="flex items-center gap-1.5 sm:gap-2">
+          
+          <a 
+            href="../index.html" 
+            class="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold flex items-center gap-1 transition mr-1"
+            title="Voltar para a página inicial do programa"
+          >
+            <span>←</span>
+            <span class="hidden sm:inline">Página Inicial</span>
+          </a>
+
+          <!-- Botão Ouvir / Narrador Global -->
+          <button 
+            type="button" 
+            id="btn-tts-global"
+            class="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition"
+            title="Narrador de Voz: Ouvir orientações da página"
+            aria-label="Ouvir orientações da página em voz alta"
+          >
+            <span>🔊</span>
+            <span class="hidden sm:inline">Narrador</span>
+          </button>
+
+          <!-- Ajuste de Fonte Rápido -->
+          <div class="hidden sm:flex items-center border border-slate-200 rounded-lg p-0.5 bg-slate-50" role="group" aria-label="Ajustar tamanho da fonte">
+            <button type="button" id="btn-a11y-font-minus" class="px-2 py-1 text-xs font-bold text-slate-600 hover:text-black rounded" title="Diminuir texto" aria-label="Diminuir tamanho do texto">A-</button>
+            <button type="button" id="btn-a11y-font-reset" class="px-2 py-1 text-xs font-bold text-slate-600 hover:text-black rounded" title="Texto tamanho normal" aria-label="Redefinir tamanho do texto">A</button>
+            <button type="button" id="btn-a11y-font-plus" class="px-2 py-1 text-xs font-bold text-slate-600 hover:text-black rounded" title="Aumentar texto" aria-label="Aumentar tamanho do texto">A+</button>
+          </div>
+
+          <!-- Botão Painel Completo de Acessibilidade -->
+          <button 
+            type="button" 
+            id="btn-toggle-a11y-panel"
+            class="px-3 py-1.5 bg-amber-400 hover:bg-amber-500 text-slate-950 text-xs font-bold rounded-lg shadow-xs flex items-center gap-1.5 transition"
+            title="Menu de Acessibilidade Digital (Alt + A)"
+            aria-haspopup="dialog"
+          >
+            <span>⚡</span>
+            <span>Acessibilidade</span>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Barra de Navegação por Abas (Tablist) -->
+      <nav class="flex space-x-1 sm:space-x-4 border-t border-slate-100 overflow-x-auto py-1" role="tablist" aria-label="Navegação da Plataforma">
+        <button 
+          type="button" 
+          id="tab-btn-explore" 
+          role="tab" 
+          aria-selected="true" 
+          aria-controls="panel-explore" 
+          class="nav-tab-btn py-2.5 px-3 border-b-2 border-blue-600 text-blue-700 font-bold text-xs sm:text-sm whitespace-nowrap flex items-center gap-1.5 transition"
+        >
+          <span>🗺️</span>
+          <span>Explorar Locais</span>
+        </button>
+
+        <button 
+          type="button" 
+          id="tab-btn-profile" 
+          role="tab" 
+          aria-selected="false" 
+          aria-controls="panel-profile" 
+          class="nav-tab-btn py-2.5 px-3 border-b-2 border-transparent text-slate-600 hover:text-blue-600 font-medium text-xs sm:text-sm whitespace-nowrap flex items-center gap-1.5 transition"
+        >
+          <span>👤</span>
+          <span>Meu Perfil</span>
+        </button>
+
+        <button 
+          type="button" 
+          id="tab-btn-badges" 
+          role="tab" 
+          aria-selected="false" 
+          aria-controls="panel-badges" 
+          class="nav-tab-btn py-2.5 px-3 border-b-2 border-transparent text-slate-600 hover:text-blue-600 font-medium text-xs sm:text-sm whitespace-nowrap flex items-center gap-1.5 transition"
+        >
+          <span>🏅</span>
+          <span>Selos & Metodologia</span>
+        </button>
+
+        <button 
+          type="button" 
+          id="tab-btn-impact" 
+          role="tab" 
+          aria-selected="false" 
+          aria-controls="panel-impact" 
+          class="nav-tab-btn py-2.5 px-3 border-b-2 border-transparent text-slate-600 hover:text-blue-600 font-medium text-xs sm:text-sm whitespace-nowrap flex items-center gap-1.5 transition"
+        >
+          <span>🤝</span>
+          <span>Sustentabilidade & Gestão</span>
+        </button>
+
+        <a 
+          href="empresa.html" 
+          class="nav-tab-btn py-2.5 px-3 border-b-2 border-transparent text-amber-700 hover:text-amber-800 font-bold text-xs sm:text-sm whitespace-nowrap flex items-center gap-1.5 transition ml-auto"
+          title="Acessar o portal corporativo para cadastrar empresas"
+        >
+          <span>🏢</span>
+          <span>Portal da Empresa →</span>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- =============================== CONTEÚDO PRINCIPAL =============================== -->
+  <main id="main-content" class="flex-1 flex flex-col overflow-hidden min-h-0 relative">
+
+    <!-- ==================== ABA 1: EXPLORAR (MAPA & LISTA) ==================== -->
+    <section id="panel-explore" class="tab-panel flex-1 flex flex-col overflow-hidden min-h-0 w-full" role="tabpanel" aria-labelledby="tab-btn-explore">
+      
+      <!-- Barra Superior de Busca e Filtros Inteligentes (Fixa no topo do painel) -->
+      <div class="bg-white border-b border-slate-200 py-3 px-4 sm:px-6 shadow-xs shrink-0 z-20">
+        <div class="max-w-7xl mx-auto space-y-3">
+          
+          <!-- Linha 1: Input de Busca + Cidade + Localização + Ordenação -->
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-2.5 items-center">
+            
+            <!-- Campo de Busca Textual -->
+            <div class="md:col-span-5 relative">
+              <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                🔍
+              </span>
+              <input 
+                type="text" 
+                id="input-search-text" 
+                placeholder="Buscar por nome, tipo de local, rua ou recurso..." 
+                class="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-xs sm:text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                aria-label="Buscar estabelecimentos"
+              />
+            </div>
+
+            <!-- Seletor de Categoria -->
+            <div class="md:col-span-3">
+              <select id="select-category" class="w-full py-2 px-3 border border-slate-300 rounded-lg text-xs sm:text-sm bg-white focus:border-blue-500" aria-label="Filtrar por categoria">
+                <option value="all">Todas as Categorias</option>
+                <option value="Restaurante">☕ Restaurantes & Cafés</option>
+                <option value="Cultura">🎭 Cultura & Teatros</option>
+                <option value="Saúde">🏥 Saúde & Clínicas</option>
+                <option value="Lazer">🌳 Lazer & Parques</option>
+                <option value="Supermercado">🛒 Comércio & Mercados</option>
+                <option value="Hotelaria">🏨 Hotéis & Turismo</option>
+              </select>
+            </div>
+
+            <!-- Seletor de Posição / Cidade -->
+            <div class="md:col-span-2">
+              <select id="select-city-preset" class="w-full py-2 px-2.5 border border-slate-300 rounded-lg text-xs sm:text-sm bg-white focus:border-blue-500" aria-label="Região de referência">
+                <option value="sp-paulista">SP - Paulista</option>
+                <option value="sp-centro">SP - Centro</option>
+                <option value="rj-copa">RJ - Copacabana</option>
+                <option value="bh-savassi">BH - Savassi</option>
+              </select>
+            </div>
+
+            <!-- Botão GPS Atual -->
+            <div class="md:col-span-2 flex gap-1.5">
+              <button 
+                type="button" 
+                id="btn-use-geolocation"
+                class="w-full py-2 px-3 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition"
+                title="Detectar minha localização real"
+              >
+                <span>📍</span>
+                <span>Meu GPS</span>
+              </button>
+            </div>
+
+          </div>
+
+          <!-- Linha 2: Chips de Filtros Rápidos de Acessibilidade & Smart Match -->
+          <div class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100">
+            
+            <!-- Chips Rápidos -->
+            <div class="flex items-center gap-1.5 overflow-x-auto py-1 max-w-3xl" id="quick-filters-container">
+              <!-- Renderizado dinamicamente via JS -->
+            </div>
+
+            <!-- Switch Match Perfil do Usuário e Visualização -->
+            <div class="flex items-center gap-3 ml-auto">
+              <!-- Match com meu perfil -->
+              <label class="flex items-center gap-2 cursor-pointer bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-100">
+                <input type="checkbox" id="toggle-profile-match" class="h-4 w-4 rounded text-blue-600 focus:ring-blue-500" />
+                <span>🎯 Match com Meu Perfil</span>
+              </label>
+
+              <!-- Alternador de Visão no Desktop -->
+              <div class="hidden sm:flex border border-slate-200 rounded-lg p-0.5 bg-slate-50" role="group" aria-label="Modo de visualização">
+                <button type="button" id="btn-view-split" class="px-2.5 py-1 text-xs font-semibold rounded bg-blue-600 text-white" title="Visualização dividida">Ambos</button>
+                <button type="button" id="btn-view-list" class="px-2.5 py-1 text-xs font-semibold rounded text-slate-600 hover:text-black" title="Ver somente lista">Lista</button>
+                <button type="button" id="btn-view-map" class="px-2.5 py-1 text-xs font-semibold rounded text-slate-600 hover:text-black" title="Ver somente mapa">Mapa</button>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Área de Resultados (Mapa Estático + Lista com Scroll Independente) -->
+      <div class="flex-1 flex flex-col lg:flex-row relative overflow-hidden min-h-0">
+        
+        <!-- Coluna da Lista: SCROLL INDEPENDENTE -->
+        <div id="list-column" class="w-full lg:w-1/2 xl:w-5/12 h-full flex flex-col bg-slate-50 border-r border-slate-200 overflow-y-auto custom-scrollbar p-4 sm:p-5 min-h-0 shrink-0 lg:shrink">
+          <div class="flex items-center justify-between mb-3 shrink-0">
+            <span id="results-count" class="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              Carregando locais...
+            </span>
+            <div class="flex items-center gap-1.5 text-xs text-slate-600">
+              <label for="select-sort" class="font-medium">Ordenar por:</label>
+              <select id="select-sort" class="border border-slate-300 rounded px-2 py-1 text-xs bg-white">
+                <option value="distance">Mais Próximos</option>
+                <option value="rating">Melhor Avaliados</option>
+                <option value="score">Maior Selo de Acessibilidade</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Container dos Cards de Estabelecimento -->
+          <div id="establishments-list" class="space-y-4 pb-12">
+            <!-- Renderizado via JS -->
+          </div>
+        </div>
+
+        <!-- Coluna do Mapa Interativo: TOTALMENTE ESTÁTICO (Não rola com a lista) -->
+        <div id="map-column" class="w-full lg:w-1/2 xl:w-7/12 h-64 sm:h-80 lg:h-full relative isolate overflow-hidden bg-slate-200 min-h-0 shrink-0 lg:shrink">
+          <div id="map-container" class="w-full h-full relative z-0"></div>
+          
+          <!-- Legenda Rápida de Selos no Mapa -->
+          <div class="absolute bottom-4 left-4 z-[400] bg-white/95 backdrop-blur-xs p-2.5 rounded-xl shadow-lg border border-slate-200 text-[11px] max-w-xs pointer-events-auto">
+            <div class="font-bold text-slate-800 mb-1 flex items-center gap-1">
+              <span>🏅</span> <span>Legenda dos Selos</span>
+            </div>
+            <div class="grid grid-cols-2 gap-x-2 gap-y-1">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-sky-600"></span> <span>Diamante (Universal)</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-600"></span> <span>Ouro (Pleno)</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-slate-600"></span> <span>Prata (Amplo)</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-orange-700"></span> <span>Bronze (Básico)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ==================== ABA 2: MEU PERFIL DE ACESSIBILIDADE ==================== -->
+    <section id="panel-profile" class="tab-panel hidden flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 lg:p-8 min-h-0 w-full" role="tabpanel" aria-labelledby="tab-btn-profile">
+      <div class="max-w-5xl mx-auto w-full">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
+        
+        <!-- Banner Informativo (Sem Laudo Médico) -->
+        <div class="bg-blue-50 border-l-4 border-blue-600 p-4 rounded-r-xl mb-6">
+          <div class="flex items-start gap-3">
+            <span class="text-2xl">💡</span>
+            <div>
+              <h3 class="font-bold text-blue-900 text-sm">Autonomia Plena e Sem Burocracia</h3>
+              <p class="text-xs text-blue-800 mt-1 leading-relaxed">
+                Nossa plataforma valoriza sua independência: <strong>não é necessário apresentar laudo ou comprovação médica</strong>. Selecione abaixo as adaptações e recursos que fazem sentido para sua rotina, e utilize o recurso de Match Inteligente para encontrar apenas locais que atendem às suas expectativas.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <form id="form-user-profile" class="space-y-6">
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label for="input-profile-name" class="block text-xs font-bold text-slate-700 uppercase mb-1">Seu Nome ou Apelido</label>
+              <input type="text" id="input-profile-name" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" placeholder="Ex: Lucas Mendes" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Filtragem Automática</label>
+              <label class="flex items-center gap-2 mt-2 cursor-pointer text-sm text-slate-800 font-medium">
+                <input type="checkbox" id="checkbox-profile-autofilter" class="h-4 w-4 rounded text-blue-600" />
+                <span>Ativar filtro de compatibilidade automática na busca</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Grupos de Público-Alvo / Perfis Rápidos -->
+          <div>
+            <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wide mb-3">
+              1. Selecione as situações ou características que se aplicam a você:
+            </h4>
+            <div id="user-profile-presets" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <!-- Renderizado dinamicamente via data.js -->
+            </div>
+          </div>
+
+          <!-- Checklist Granular de Recursos -->
+          <div>
+            <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wide mb-3">
+              2. Recursos de acessibilidade que você considera indispensáveis:
+            </h4>
+            <div id="user-profile-features-checklist" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+              <!-- Renderizado dinamicamente via data.js -->
+            </div>
+          </div>
+
+          <div>
+            <label for="textarea-profile-notes" class="block text-xs font-bold text-slate-700 uppercase mb-1">
+              Observações Adicionais para sua Navegação (Opcional)
+            </label>
+            <textarea id="textarea-profile-notes" rows="2" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" placeholder="Ex: Tenho cadeira de rodas motorizada de 75cm de largura e prefiro locais com mesas externas."></textarea>
+          </div>
+
+          <div class="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+            <button type="submit" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-lg shadow transition">
+              Salvar Meu Perfil
+            </button>
+          </div>
+
+        </form>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== ABA 3: CADASTRO DE ESTABELECIMENTOS ==================== -->
+    <section id="panel-register" class="tab-panel hidden flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 lg:p-8 min-h-0 w-full" role="tabpanel" aria-labelledby="tab-btn-register">
+      <div class="max-w-5xl mx-auto w-full">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
+        
+        <div class="mb-6">
+          <span class="text-xs font-bold text-blue-600 uppercase tracking-wider">Espaço da Empresa & Prestador</span>
+          <h2 class="text-xl sm:text-2xl font-black text-slate-900 mt-1">
+            Cadastrar Novo Estabelecimento Acessível
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-600 mt-1">
+            O cadastro básico é <strong>100% gratuito</strong>. Informe com transparência os recursos disponíveis para que o sistema calcule automaticamente a certificação de inclusão do seu local.
+          </p>
+        </div>
+
+        <!-- Banner com a Prévia do Selo Conquistado Dinâmico -->
+        <div id="register-badge-preview" class="mb-6">
+          <!-- Atualizado em tempo real pelo JS -->
+        </div>
+
+        <form id="form-register-establishment" class="space-y-6">
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label for="input-reg-name" class="block text-xs font-bold text-slate-700 uppercase mb-1">Nome Comercial do Estabelecimento *</label>
+              <input type="text" id="input-reg-name" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" placeholder="Ex: Cantina & Pizzaria São Paulo" />
+            </div>
+
+            <div>
+              <label for="select-reg-category" class="block text-xs font-bold text-slate-700 uppercase mb-1">Categoria Principal *</label>
+              <select id="select-reg-category" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white">
+                <option value="Restaurante / Café">Restaurante / Café / Bar</option>
+                <option value="Cultura / Teatro">Cultura / Teatro / Museu / Cinema</option>
+                <option value="Saúde / Clínica">Saúde / Hospital / Clínica / Laboratório</option>
+                <option value="Lazer / Parque">Lazer / Parque / Praça</option>
+                <option value="Comércio / Supermercado">Comércio / Supermercado / Shopping</option>
+                <option value="Hotelaria / Turismo">Hotelaria / Pousada / Turismo</option>
+                <option value="Educação / Escola">Educação / Escola / Universidade</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="md:col-span-2">
+              <label for="input-reg-address" class="block text-xs font-bold text-slate-700 uppercase mb-1">Endereço Completo (Rua, Número, Bairro) *</label>
+              <input type="text" id="input-reg-address" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" placeholder="Ex: Rua Oscar Freire, 420 - Cerqueira César" />
+            </div>
+
+            <div>
+              <label for="input-reg-city" class="block text-xs font-bold text-slate-700 uppercase mb-1">Cidade / Estado *</label>
+              <input type="text" id="input-reg-city" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" value="São Paulo" placeholder="Cidade" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label for="input-reg-phone" class="block text-xs font-bold text-slate-700 uppercase mb-1">Telefone Fixo</label>
+              <input type="text" id="input-reg-phone" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" placeholder="(11) 3344-5566" />
+            </div>
+
+            <div>
+              <label for="input-reg-whatsapp" class="block text-xs font-bold text-slate-700 uppercase mb-1">WhatsApp de Atendimento</label>
+              <input type="text" id="input-reg-whatsapp" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" placeholder="(11) 98765-4321" />
+            </div>
+
+            <div>
+              <label for="select-reg-plan" class="block text-xs font-bold text-slate-700 uppercase mb-1">Plano de Participação</label>
+              <select id="select-reg-plan" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white">
+                <option value="Gratuito">Básico Gratuito (Selo padrão)</option>
+                <option value="Empresa Inclusiva Prata">Prata (Destaque na busca)</option>
+                <option value="Empresa Inclusiva Ouro">Ouro (Consultoria e Relatório)</option>
+                <option value="Empresa Inclusiva Diamante">Diamante (Certificação de Excelência)</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label for="textarea-reg-description" class="block text-xs font-bold text-slate-700 uppercase mb-1">Descrição do Estabelecimento e Diferenciais Inclusivos *</label>
+            <textarea id="textarea-reg-description" rows="3" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" placeholder="Conte aos visitantes sobre as adaptações, cardápios, treinamento da equipe e facilidades de acesso."></textarea>
+          </div>
+
+          <!-- Checklist de Acessibilidade com Pontuação Automática -->
+          <div class="pt-4 border-t border-slate-200">
+            <h3 class="text-sm font-black text-slate-900 mb-1">
+              Recursos de Acessibilidade Disponíveis no Local
+            </h3>
+            <p class="text-xs text-slate-500 mb-4">
+              Marque apenas os recursos efetivamente testados e prontos para uso. O selo será recalculado imediatamente.
+            </p>
+
+            <div id="register-features-checklist">
+              <!-- Renderizado dinamicamente via JS -->
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+            <button type="reset" class="px-4 py-2 border border-slate-300 text-slate-700 font-semibold text-xs rounded-lg hover:bg-slate-50">
+              Limpar Campos
+            </button>
+            <button type="submit" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-lg shadow transition">
+              Salvar e Publicar Estabelecimento
+            </button>
+          </div>
+
+        </form>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== ABA 4: SELOS & CERTIFICAÇÃO ==================== -->
+    <section id="panel-badges" class="tab-panel hidden flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 lg:p-8 min-h-0 w-full" role="tabpanel" aria-labelledby="tab-btn-badges">
+      <div class="max-w-5xl mx-auto w-full">
+        <div class="space-y-6">
+        
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
+          <span class="text-xs font-bold text-amber-600 uppercase tracking-wider">Programa de Reconhecimento</span>
+          <h2 class="text-xl sm:text-2xl font-black text-slate-900 mt-1">
+            Metodologia dos Selos de Acessibilidade & Inclusão
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-600 mt-2 leading-relaxed">
+            Para valorizar as empresas comprometidas com a acessibilidade e dar previsibilidade aos consumidores, desenvolvemos um sistema transparente baseado nas diretrizes da <strong>ABNT NBR 9050</strong>, na <strong>Lei Brasileira de Inclusão (LBI - Lei 13.146/15)</strong> e na validação colaborativa da própria comunidade.
+          </p>
+        </div>
+
+        <!-- Cards das 4 Classificações -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          
+          <!-- Selo Diamante -->
+          <div class="bg-white rounded-xl border-2 border-sky-400 p-5 shadow-sm relative overflow-hidden">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="w-10 h-10 rounded-lg bg-sky-600 text-white flex items-center justify-center font-bold text-lg">💎</span>
+              <div>
+                <h3 class="font-extrabold text-slate-900 text-base">Selo Diamante - Excelência Universal</h3>
+                <span class="text-[11px] font-semibold text-sky-700">Mínimo 120 pontos • 4 categorias distintas</span>
+              </div>
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed mb-3">
+              Concedido a espaços com acessibilidade plena e contínua: mobilidade sem barreiras, sanitários adaptados, atendimento capacitado em Libras, recursos em Braille/áudio e acolhimento estruturado para pessoas neurodivergentes/autistas.
+            </p>
+            <div class="text-[11px] font-bold text-sky-800 bg-sky-50 px-2.5 py-1 rounded inline-block">
+              ✓ Recebe adesivo com QR Code de verificação para a vitrine
+            </div>
+          </div>
+
+          <!-- Selo Ouro -->
+          <div class="bg-white rounded-xl border-2 border-amber-400 p-5 shadow-sm relative overflow-hidden">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="w-10 h-10 rounded-lg bg-amber-500 text-white flex items-center justify-center font-bold text-lg">🥇</span>
+              <div>
+                <h3 class="font-extrabold text-slate-900 text-base">Selo Ouro - Inclusão Plena</h3>
+                <span class="text-[11px] font-semibold text-amber-700">Mínimo 80 pontos • 3 categorias distintas</span>
+              </div>
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed mb-3">
+              Indica excelente infraestrutura arquitetônica (rampa, portas largas, banheiro adaptado) somada a recursos sensoriais consistentes (Libras ou piso tátil e cão-guia acolhido).
+            </p>
+            <div class="text-[11px] font-bold text-amber-800 bg-amber-50 px-2.5 py-1 rounded inline-block">
+              ✓ Destacado na busca regional e no mapa interativo
+            </div>
+          </div>
+
+          <!-- Selo Prata -->
+          <div class="bg-white rounded-xl border border-slate-300 p-5 shadow-sm relative overflow-hidden">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="w-10 h-10 rounded-lg bg-slate-600 text-white flex items-center justify-center font-bold text-lg">🥈</span>
+              <div>
+                <h3 class="font-extrabold text-slate-900 text-base">Selo Prata - Acesso Amplo</h3>
+                <span class="text-[11px] font-semibold text-slate-700">Mínimo 50 pontos • 2 categorias distintas</span>
+              </div>
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed mb-3">
+              Garante circulação segura para cadeira de rodas, entrada sem degraus ou rampa adequada e banheiro adaptado conforme as normas vigentes.
+            </p>
+          </div>
+
+          <!-- Selo Bronze -->
+          <div class="bg-white rounded-xl border border-orange-200 p-5 shadow-sm relative overflow-hidden">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="w-10 h-10 rounded-lg bg-orange-700 text-white flex items-center justify-center font-bold text-lg">🥉</span>
+              <div>
+                <h3 class="font-extrabold text-slate-900 text-base">Selo Bronze - Acesso Básico</h3>
+                <span class="text-[11px] font-semibold text-orange-700">Mínimo 25 pontos</span>
+              </div>
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed mb-3">
+              Reconhece o primeiro passo: eliminação de degraus na entrada e boa vontade no atendimento ao público com deficiência.
+            </p>
+          </div>
+
+        </div>
+
+        <!-- Validação Comunitária -->
+        <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-5 flex items-start gap-3">
+          <span class="text-2xl">🛡️</span>
+          <div>
+            <h4 class="text-sm font-bold text-emerald-950">Validação Colaborativa ("Selo Verificado pela Comunidade")</h4>
+            <p class="text-xs text-emerald-900 mt-1 leading-relaxed">
+              Quando um local acumula 3 ou mais avaliações positivas de usuários confirmando as condições reais do espaço, ele ganha a insígnia <strong>✓ Verificado pela Comunidade</strong>, garantindo máxima confiabilidade para as pessoas que dependem dessas adaptações.
+            </p>
+          </div>
+        </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== ABA 5: SUSTENTABILIDADE & GESTÃO ==================== -->
+    <section id="panel-impact" class="tab-panel hidden flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 lg:p-8 min-h-0 w-full" role="tabpanel" aria-labelledby="tab-btn-impact">
+      <div class="max-w-5xl mx-auto w-full">
+        <div class="space-y-6">
+        
+        <!-- Modelo Econômico e Parcerias -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
+          <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider">Sustentabilidade Econômica & Parcerias</span>
+          <h2 class="text-xl sm:text-2xl font-black text-slate-900 mt-1">
+            Como o Programa se Mantém e Expande
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-600 mt-2 leading-relaxed">
+            A plataforma opera em um modelo híbrido de negócio social: acesso <strong>sempre gratuito para pessoas com deficiência e famílias</strong>, viabilizado por convênios públicos, planos de posicionamento comercial para empresas e patrocínios de responsabilidade social (ESG).
+          </p>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+            <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+              <span class="text-xl">🏛️</span>
+              <h4 class="font-bold text-sm text-slate-800 mt-2">Convênios com Órgãos Públicos</h4>
+              <p class="text-xs text-slate-500 mt-1">
+                Integração com prefeituras, Secretarias da Pessoa com Deficiência e Conselhos Municipais para mapeamento de equipamentos públicos (hospitais, parques, teatros).
+              </p>
+            </div>
+
+            <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+              <span class="text-xl">💼</span>
+              <h4 class="font-bold text-sm text-slate-800 mt-2">Planos Corporativos & ESG</h4>
+              <p class="text-xs text-slate-500 mt-1">
+                Assinaturas corporativas para redes varejistas e hotelaria com relatórios diagnósticos de acessibilidade, treinamentos de equipe em Libras e destaque nas buscas.
+              </p>
+            </div>
+
+            <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+              <span class="text-xl">🎓</span>
+              <h4 class="font-bold text-sm text-slate-800 mt-2">Universidades & Sociedade Civil</h4>
+              <p class="text-xs text-slate-500 mt-1">
+                Colaboração científica com cursos de arquitetura e tecnologia assistiva para aprimoramento contínuo dos critérios de usabilidade.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gestão dos Dados Locais (LocalStorage Management) -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
+          <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Armazenamento Local (LocalStorage)</span>
+          <h3 class="text-base font-bold text-slate-900 mt-1">Gerenciador de Dados do Protótipo</h3>
+          <p class="text-xs text-slate-600 mt-1 mb-4">
+            Todas as alterações (novos estabelecimentos, avaliações enviadas e configurações de perfil) estão sendo persistidas no seu navegador. Você pode exportar, importar backups ou restaurar a demonstração inicial.
+          </p>
+
+          <div class="flex flex-wrap items-center gap-3">
+            <button 
+              type="button" 
+              id="btn-export-data"
+              class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition"
+            >
+              <span>📥</span> <span>Exportar Backup (JSON)</span>
+            </button>
+
+            <label class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer border border-slate-300 transition">
+              <span>📤</span> <span>Importar Backup (JSON)</span>
+              <input type="file" id="input-import-data" accept=".json" class="hidden" />
+            </label>
+
+            <button 
+              type="button" 
+              id="btn-reset-demo-data"
+              class="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-bold flex items-center gap-1.5 transition"
+            >
+              <span>🔄</span> <span>Restaurar Dados Originais de Demonstração</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+</main>
+
+  <!-- ======================== MODAL DE DETALHES DO ESTABELECIMENTO ======================== -->
+  <div id="establishment-detail-modal" class="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6 hidden" role="dialog" aria-modal="true" aria-labelledby="modal-est-name">
+    <!-- Backdrop escuro -->
+    <div id="modal-backdrop" class="fixed inset-0 bg-slate-950/70 backdrop-blur-xs transition-opacity"></div>
+
+    <!-- Conteúdo da Modal -->
+    <div class="modal-content-box bg-white rounded-2xl max-w-3xl w-full max-h-[92vh] flex flex-col shadow-2xl relative z-10 overflow-hidden border border-slate-200">
+      
+      <!-- Cabeçalho do Modal -->
+      <div class="p-4 sm:p-5 border-b border-slate-200 flex items-start justify-between gap-4 bg-slate-50">
+        <div class="flex-1">
+          <div class="flex items-center gap-2 mb-1">
+            <span id="modal-est-category" class="text-xs font-bold text-blue-600 uppercase tracking-wide">
+              Restaurante
+            </span>
+            <span id="modal-est-rating" class="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+              ★ 4.9 (14)
+            </span>
+          </div>
+          <h2 id="modal-est-name" class="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
+            Nome do Estabelecimento
+          </h2>
+          <p id="modal-est-address" class="text-xs text-slate-500 mt-1">
+            📍 Endereço
+          </p>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <!-- Botão Ouvir Detalhes (TTS) -->
+          <button 
+            type="button" 
+            id="btn-modal-speech"
+            class="p-2 rounded-lg border border-slate-300 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-1"
+            title="Ouvir audiodescrição completa deste local"
+          >
+            <span>🔊</span>
+            <span class="hidden sm:inline">Ouvir</span>
+          </button>
+
+          <!-- Botão Fechar -->
+          <button 
+            type="button" 
+            id="btn-close-modal" 
+            class="p-2 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-200 text-lg leading-none transition"
+            aria-label="Fechar modal"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <!-- Corpo com Rolagem -->
+      <div class="p-5 sm:p-6 overflow-y-auto custom-scrollbar space-y-6">
+        
+        <!-- Foto de Capa & Selo Oficial (100% preenchida sem sobras cinzas) -->
+        <div class="grid grid-cols-1 sm:grid-cols-12 gap-4 items-stretch">
+          <div class="sm:col-span-5 h-52 sm:h-auto min-h-[190px] rounded-xl overflow-hidden bg-slate-200 shadow-inner relative self-stretch">
+            <img id="modal-est-image" src="" alt="" class="w-full h-full absolute inset-0 object-cover" />
+          </div>
+          <div class="sm:col-span-7 flex flex-col justify-center" id="modal-est-badge-container">
+            <!-- Selo inserido via JS -->
+          </div>
+        </div>
+
+        <!-- Descrição -->
+        <div>
+          <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-1">Sobre o Local</h3>
+          <p id="modal-est-description" class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+            Descrição detalhada do local.
+          </p>
+        </div>
+
+        <!-- Contatos, Rota e Certificação -->
+        <div class="flex flex-wrap items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+          <div>
+            <span class="font-bold text-slate-700">Telefone:</span>
+            <span id="modal-est-phone" class="text-slate-600 ml-1">Não informado</span>
+          </div>
+
+          <div class="flex items-center gap-2 ml-auto">
+            <a 
+              id="modal-est-route-btn" 
+              href="#" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg font-bold shadow-xs transition"
+              title="Abrir rota acessível no mapa"
+            >
+              <span>🗺️</span> <span>Como Chegar</span>
+            </a>
+
+            <button 
+              type="button" 
+              id="modal-est-certificate-btn" 
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-bold shadow-xs transition"
+              title="Visualizar e imprimir selo e certificado oficial"
+            >
+              <span>🏅</span> <span>Selo & Certificado</span>
+            </button>
+
+            <a 
+              id="modal-est-whatsapp-btn" 
+              href="#" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-xs transition"
+            >
+              <span>💬</span> <span>WhatsApp</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Grade de Recursos Detalhados de Acessibilidade -->
+        <div>
+          <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
+            Status dos Itens de Acessibilidade Certificados
+          </h3>
+          <div id="modal-est-features-list">
+            <!-- Inserido dinamicamente via JS -->
+          </div>
+        </div>
+
+        <!-- Seção de Avaliações Comunitárias -->
+        <div class="pt-4 border-t border-slate-200">
+          <h3 class="text-sm font-black text-slate-900 mb-2 flex items-center justify-between">
+            <span>Avaliações da Comunidade</span>
+            <span class="text-xs font-normal text-slate-500">Relatos reais de visitantes</span>
+          </h3>
+
+          <div id="modal-est-reviews-list" class="space-y-2 mb-4">
+            <!-- Inserido via JS -->
+          </div>
+
+          <!-- Formulário para Adicionar Avaliação -->
+          <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 mt-4">
+            <h4 class="text-xs font-bold text-slate-800 uppercase mb-2">Já visitou este local? Envie seu relato:</h4>
+            <form id="form-add-review" class="space-y-3">
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div>
+                  <input type="text" id="input-review-author" placeholder="Seu nome" class="w-full text-xs p-2 border border-slate-300 rounded bg-white" />
+                </div>
+                <div>
+                  <input type="text" id="input-review-role" placeholder="Ex: Usuário de cadeira de rodas" class="w-full text-xs p-2 border border-slate-300 rounded bg-white" />
+                </div>
+                <div>
+                  <select id="select-review-rating" class="w-full text-xs p-2 border border-slate-300 rounded bg-white">
+                    <option value="5">★★★★★ 5 estrelas</option>
+                    <option value="4">★★★★☆ 4 estrelas</option>
+                    <option value="3">★★★☆☆ 3 estrelas</option>
+                    <option value="2">★★☆☆☆ 2 estrelas</option>
+                    <option value="1">★☆☆☆☆ 1 estrela</option>
+                  </select>
+                </div>
+              </div>
+              <textarea id="textarea-review-comment" required rows="2" placeholder="Descreva sua experiência sobre a acessibilidade física, o atendimento e se os recursos estavam funcionando..." class="w-full text-xs p-2 border border-slate-300 rounded bg-white"></textarea>
+              <button type="submit" class="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-bold transition shadow-xs">
+                Publicar Avaliação
+              </button>
+            </form>
+          </div>
+
+        </div>
+
+        <!-- Seção de Barreiras Temporárias / Auditoria Colaborativa -->
+        <div class="pt-4 border-t border-slate-200">
+          <div class="flex items-center justify-between mb-2">
+            <div>
+              <h3 class="text-sm font-black text-slate-900 flex items-center gap-1.5">
+                <span>⚠️</span> <span>Avisos e Barreiras Reportadas</span>
+              </h3>
+              <p class="text-xs text-slate-500">Informações em tempo real sobre manutenção ou obstáculos temporários</p>
+            </div>
+            <button 
+              type="button" 
+              id="btn-toggle-report-barrier" 
+              class="px-2.5 py-1 text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-lg transition"
+            >
+              + Reportar Barreira
+            </button>
+          </div>
+
+          <div id="modal-est-barriers-list" class="space-y-2 mb-3">
+            <!-- Inserido dinamicamente via JS -->
+          </div>
+
+          <!-- Formulário Oculto de Reporte de Barreira -->
+          <div id="box-form-report-barrier" class="p-4 bg-amber-50/70 border border-amber-200 rounded-xl hidden">
+            <h4 class="text-xs font-bold text-amber-900 uppercase mb-2">Reportar Barreira ou Obstáculo Temporário</h4>
+            <form id="form-report-barrier" class="space-y-2.5">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div>
+                  <input type="text" id="input-barrier-author" placeholder="Seu nome ou apelido" class="w-full text-xs p-2 border border-amber-300 rounded bg-white" />
+                </div>
+                <div>
+                  <select id="select-barrier-type" class="w-full text-xs p-2 border border-amber-300 rounded bg-white">
+                    <option value="Manutenção de Equipamento">Manutenção de Equipamento (Elevador/Plataforma)</option>
+                    <option value="Obstáculo Físico na Calçada">Obstáculo Físico ou Degrau Não Informado</option>
+                    <option value="Sanitário Indisponível">Banheiro Adaptado Trancado ou Inutilizável</option>
+                    <option value="Recurso Não Encontrado">Falta de Cardápio em Braille / Ausência de Libras</option>
+                    <option value="Outro">Outro Problema de Acessibilidade</option>
+                  </select>
+                </div>
+              </div>
+              <input type="text" id="input-barrier-title" required placeholder="Título breve (ex: Elevador social quebrado)" class="w-full text-xs p-2 border border-amber-300 rounded bg-white" />
+              <textarea id="textarea-barrier-desc" required rows="2" placeholder="Explique com clareza o que encontrou para orientar outros usuários..." class="w-full text-xs p-2 border border-amber-300 rounded bg-white"></textarea>
+              <div class="flex items-center justify-end gap-2">
+                <button type="button" id="btn-cancel-barrier" class="px-3 py-1 text-xs text-slate-600 hover:text-slate-900">Cancelar</button>
+                <button type="submit" class="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded text-xs font-bold transition shadow-xs">
+                  Registrar Aviso
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ======================== PAINEL FLUTUANTE DE ACESSIBILIDADE DIGITAL ======================== -->
+  <aside id="accessibility-panel" class="fixed bottom-6 right-6 z-[99998] bg-white border-2 border-slate-800 rounded-2xl shadow-2xl p-5 max-w-xs w-full hidden" role="dialog" aria-labelledby="a11y-title">
+    <div class="flex items-center justify-between pb-3 border-b border-slate-200 mb-3">
+      <div class="flex items-center gap-1.5">
+        <span class="text-lg">⚡</span>
+        <h3 id="a11y-title" class="font-extrabold text-sm text-slate-900">Acessibilidade Digital</h3>
+      </div>
+      <button type="button" id="btn-close-a11y-panel" class="text-slate-400 hover:text-black font-bold text-sm" aria-label="Fechar painel">✕</button>
+    </div>
+
+    <div class="space-y-4 text-xs">
+      
+      <!-- Contraste -->
+      <div>
+        <label class="font-bold text-slate-700 block mb-1.5">Modo de Contraste</label>
+        <div class="grid grid-cols-3 gap-1">
+          <button type="button" id="btn-a11y-contrast-normal" class="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded font-semibold text-center border">Normal</button>
+          <button type="button" id="btn-a11y-contrast-dark" class="py-1.5 px-2 bg-black text-yellow-300 rounded font-bold text-center border border-yellow-400">Escuro</button>
+          <button type="button" id="btn-a11y-contrast-light" class="py-1.5 px-2 bg-white text-black rounded font-black text-center border-2 border-black">Claro</button>
+        </div>
+      </div>
+
+      <!-- Fonte e Legibilidade -->
+      <div>
+        <label class="font-bold text-slate-700 block mb-1.5">Ajustes de Leitura</label>
+        <div class="space-y-1.5">
+          <button 
+            type="button" 
+            id="btn-a11y-dyslexia"
+            class="w-full py-1.5 px-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded font-medium flex items-center justify-between text-left"
+            aria-pressed="false"
+          >
+            <span>Fonte para Dislexia (Lexend)</span>
+            <span class="text-[10px] text-blue-600 font-bold">Alternar</span>
+          </button>
+
+          <button 
+            type="button" 
+            id="btn-a11y-guide"
+            class="w-full py-1.5 px-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded font-medium flex items-center justify-between text-left"
+            aria-pressed="false"
+          >
+            <span>Régua / Guia de Leitura</span>
+            <span class="text-[10px] text-blue-600 font-bold">Alternar</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Atalhos de Teclado -->
+      <div class="pt-2 border-t border-slate-100 text-[11px] text-slate-500 space-y-0.5">
+        <div><kbd class="bg-slate-100 px-1 rounded border">Alt + A</kbd> Menu Acessibilidade</div>
+        <div><kbd class="bg-slate-100 px-1 rounded border">Alt + M</kbd> Ir para o Mapa</div>
+        <div><kbd class="bg-slate-100 px-1 rounded border">Alt + S</kbd> Parar Voz do Narrador</div>
+      </div>
+
+    </div>
+  </aside>
+
+  <!-- ======================== WIDGET VLIBRAS OFICIAL ======================== -->
+  <div vw class="enabled">
+    <div vw-access-button class="active"></div>
+    <div vw-plugin-wrapper>
+      <div class="vw-plugin-top-wrapper"></div>
+    </div>
+  </div>
+
+  <!-- =============================== RODAPÉ =============================== -->
+  <footer class="bg-slate-900 text-slate-300 py-8 border-t border-slate-800 mt-auto">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-xs leading-relaxed">
+      <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+        <div>
+          <div class="font-bold text-white text-sm flex items-center gap-2">
+            <span>♿ AcessaAqui</span>
+            <span class="text-[11px] font-normal text-slate-400">— Plataforma Digital de Inclusão e Acessibilidade</span>
+          </div>
+          <p class="text-slate-400 mt-1 max-w-xl">
+            Promovendo autonomia, transparência e respeito à diversidade humana em conformidade com a Lei Brasileira de Inclusão (Lei nº 13.146/2015) e normas ABNT NBR 9050.
+          </p>
+        </div>
+        <div class="text-slate-400 text-right">
+          <p>Armazenamento local ativo • Protótipo 100% Funcional</p>
+          <p class="text-[11px] text-slate-500 mt-0.5">Disponível para Web e Dispositivos Móveis</p>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts da Aplicação (ES Modules) -->
+  <script type="module" src="../js/app.js"></script>
+
+</body>
+</html>
