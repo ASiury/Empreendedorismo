@@ -5,11 +5,10 @@ import {
   getEstablishmentById,
   getReviews, 
   addReview, 
+  getBarriers,
+  addBarrier,
   getUserProfile, 
   saveUserProfile, 
-  resetAllData, 
-  exportAllData, 
-  importAllData,
   DISABILITY_PRESETS 
 } from './data.js';
 
@@ -21,6 +20,7 @@ import {
 
 import { MapManager } from './map.js';
 import { AccessibilityManager } from './accessibility.js';
+import { getNearbyOSMPlaces } from './openstreetmap.js';
 
 class App {
   constructor() {
@@ -34,6 +34,8 @@ class App {
     this.autoFilterByProfile = false;
     this.sortBy = 'distance'; // 'distance', 'rating', 'score'
     this.currentEstablishmentModal = null;
+    this.nearbyOSMPlaces = [];
+    this.nearbyRequest = null;
     this.cityPresetCoordinates = {
       'sp-paulista': { lat: -23.561414, lng: -46.655881, name: 'São Paulo (Av. Paulista)' },
       'sp-centro': { lat: -23.548900, lng: -46.638800, name: 'São Paulo (Centro)' },
@@ -47,13 +49,16 @@ class App {
   init() {
     this.initMap();
     this.setupNavigation();
+    this.setupSubHeaderToggle();
     this.setupSearchAndFilters();
     this.setupUserProfile();
     this.setupEstablishmentRegistration();
     this.setupDetailModal();
-    this.setupDataManagement();
+    this.setupBarrierForm();
     this.setupAccessibilityToolbar();
     this.render();
+    // A tela abre na região indicada pelo seletor (Paulista); GPS só é solicitado após ação explícita.
+    this.loadNearbyPlaces(this.mapManager.defaultLocation);
 
     // Ouvinte para evento customizado vindo do popup do mapa
     window.addEventListener('open-establishment-details', (e) => {
@@ -89,6 +94,26 @@ class App {
     if (btnViewMap) btnViewMap.addEventListener('click', () => this.setViewMode('map'));
     if (btnViewList) btnViewList.addEventListener('click', () => this.setViewMode('list'));
     if (btnViewSplit) btnViewSplit.addEventListener('click', () => this.setViewMode('split'));
+  }
+
+  setupSubHeaderToggle() {
+    const button = document.getElementById('btn-subHeader');
+    const subHeader = document.getElementById('div-subHeader');
+    const label = document.getElementById('subHeader-toggle-label');
+    const icon = document.getElementById('subHeader-toggle-icon');
+
+    if (!button || !subHeader || !label || !icon) return;
+
+    button.addEventListener('click', () => {
+      const isExpanded = button.getAttribute('aria-expanded') === 'true';
+      subHeader.hidden = isExpanded;
+      button.setAttribute('aria-expanded', String(!isExpanded));
+      label.textContent = isExpanded ? 'Mostrar filtros de busca' : 'Ocultar filtros de busca';
+      icon.textContent = isExpanded ? '⌄' : '⌃';
+      button.title = isExpanded
+        ? 'Mostra os filtros de busca e localização.'
+        : 'Oculta os filtros para ampliar o espaço de visualização dos locais.';
+    });
   }
 
   switchTab(tabName) {
@@ -193,11 +218,11 @@ class App {
           (loc) => {
             btnGeo.classList.remove('animate-spin');
             this.a11y.announce('Sua localização atual foi identificada.');
-            this.render();
+            this.loadNearbyPlaces(loc);
           },
           (err) => {
             btnGeo.classList.remove('animate-spin');
-            alert(`Não foi possível obter localização exata: ${err}. Usando posição padrão de São Paulo.`);
+            alert(`Não foi possível obter sua localização: ${err}. Você ainda pode escolher uma região no seletor ao lado.`);
           }
         );
       });
@@ -210,7 +235,7 @@ class App {
         const coords = this.cityPresetCoordinates[e.target.value];
         if (coords) {
           this.mapManager.setUserCoordinates(coords.lat, coords.lng);
-          this.render();
+          this.loadNearbyPlaces({ lat: coords.lat, lng: coords.lng });
           this.a11y.announce(`Mapa centralizado em ${coords.name}`);
         }
       });
@@ -283,18 +308,40 @@ class App {
   }
 
   // ========================== FILTRAGEM E RENDERIZAÇÃO ========================== //
-  getFilteredEstablishments() {
-    let list = getEstablishments();
-    const userLoc = this.mapManager?.userLocation || { lat: -23.561414, lng: -46.655881 };
+  async loadNearbyPlaces(location) {
+    this.nearbyRequest?.abort();
+    this.nearbyRequest = new AbortController();
+    const status = document.getElementById('nearby-places-status');
+    if (status) status.textContent = 'Buscando locais próximos no OpenStreetMap…';
+
+    try {
+      const places = await getNearbyOSMPlaces(location, { signal: this.nearbyRequest.signal });
+      const registered = await getEstablishments();
+      const names = new Set(registered.map((e) => e.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()));
+      this.nearbyOSMPlaces = places.filter((place) => {
+        const normalized = place.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+        if (names.has(normalized)) return false;
+        return !registered.some((e) => this.mapManager.calculateDistance(e.lat, e.lng, place.lat, place.lng) < 0.03);
+      });
+      if (status) status.textContent = this.nearbyOSMPlaces.length
+        ? `${this.nearbyOSMPlaces.length} locais próximos encontrados no OpenStreetMap. A acessibilidade ainda não foi verificada.`
+        : 'Nenhum local nomeado encontrado perto desta região.';
+    } catch (error) {
+      if (error.name === 'AbortError') return;
+      this.nearbyOSMPlaces = [];
+      if (status) status.textContent = 'Não foi possível carregar locais do OpenStreetMap agora. Os locais cadastrados no AcessaAqui continuam disponíveis.';
+    }
+    await this.render();
+  }
+
+  async getFilteredEstablishments() {
+    let list = await getEstablishments();
+    list = [...list, ...this.nearbyOSMPlaces];
+    const userLoc = this.mapManager?.referenceLocation;
 
     // Calcula distância para cada um
     list = list.map(item => {
-      const distance = this.mapManager.calculateDistance(
-        userLoc.lat,
-        userLoc.lng,
-        item.lat,
-        item.lng
-      );
+      const distance = userLoc ? this.mapManager.calculateDistance(userLoc.lat, userLoc.lng, item.lat, item.lng) : null;
       return { ...item, distance };
     });
 
@@ -334,7 +381,7 @@ class App {
     }
 
     // Ordenação
-    if (this.sortBy === 'distance') {
+    if (this.sortBy === 'distance' && userLoc) {
       list.sort((a, b) => a.distance - b.distance);
     } else if (this.sortBy === 'rating') {
       list.sort((a, b) => b.rating - a.rating);
@@ -345,14 +392,16 @@ class App {
     return list;
   }
 
-  render() {
-    const list = this.getFilteredEstablishments();
+  async render() {
+    const list = await this.getFilteredEstablishments();
     this.renderList(list);
     this.mapManager.renderEstablishments(list);
 
     const countEl = document.getElementById('results-count');
     if (countEl) {
-      countEl.textContent = `${list.length} ${list.length === 1 ? 'estabelecimento encontrado' : 'estabelecimentos encontrados'}`;
+      const osmCount = list.filter((place) => place.source === 'osm').length;
+      const registeredCount = list.length - osmCount;
+      countEl.textContent = `${list.length} ${list.length === 1 ? 'local encontrado' : 'locais encontrados'} (${registeredCount} no AcessaAqui, ${osmCount} no OpenStreetMap)`;
     }
   }
 
@@ -368,8 +417,9 @@ class App {
           </div>
           <h3 class="text-lg font-bold text-slate-800 mb-1">Nenhum estabelecimento encontrado</h3>
           <p class="text-sm text-slate-500 mb-4 max-w-md mx-auto">
-            Não encontramos nenhum local correspondente com todos os critérios selecionados no momento. Tente remover alguns filtros ou ampliar a busca.
+            Não há locais que correspondam aos filtros atuais. Limpe a busca ou, se sua empresa quiser publicar uma unidade, acesse o cadastro empresarial.
           </p>
+          <a href="../index.html?entrar=1" class="inline-flex mb-3 px-4 py-2 border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 rounded-lg text-sm font-semibold transition">Entrar ou cadastrar empresa</a>
           <button 
             type="button" 
             id="btn-clear-filters"
@@ -398,7 +448,10 @@ class App {
     }
 
     container.innerHTML = establishments.map(est => {
-      const tier = est.scoreData?.tier || BADGE_TIERS.INICIANTE;
+      const isOsm = est.source === 'osm';
+      const tier = isOsm
+        ? { name: 'Acessibilidade não verificada', badgeClass: 'bg-amber-100 text-amber-900' }
+        : (est.scoreData?.tier || BADGE_TIERS.INICIANTE);
       const features = (est.features || []).slice(0, 4);
 
       return `
@@ -409,22 +462,28 @@ class App {
         >
           <!-- Imagem / Destaque (Preenchimento 100% de ponta a ponta sem sobras cinzas) -->
           <div class="w-full sm:w-52 md:w-56 h-48 sm:h-auto self-stretch relative shrink-0 overflow-hidden bg-slate-200">
-            <img 
-              src="${est.image || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=500'}" 
-              alt="${est.name}"
-              class="w-full h-full absolute inset-0 object-cover group-hover:scale-105 transition-transform duration-300"
-              loading="lazy"
-            />
+            ${isOsm || est.isSample ? `
+              <div class="absolute inset-0 flex flex-col items-center justify-center bg-slate-100 text-slate-500" aria-label="Local listado no OpenStreetMap">
+                <span class="text-4xl" aria-hidden="true">📍</span>
+                <span class="mt-2 text-xs font-semibold">${isOsm ? 'OpenStreetMap' : 'Exemplo fictício'}</span>
+              </div>
+            ` : `
+              <img src="${est.image || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=500'}" alt="${est.name}" class="w-full h-full absolute inset-0 object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
+            `}
             <div class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none sm:hidden"></div>
             <div class="absolute top-2.5 left-2.5 z-10">
               <span class="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-md shadow-md ${tier.badgeClass}">
                 ${tier.name.split(' - ')[0]}
               </span>
             </div>
-            ${est.verifiedByCommunity ? `
+            ${est.isSample ? `
+              <div class="absolute bottom-2.5 left-2.5 z-10">
+                <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded bg-rose-700 text-white shadow-md">Exemplo fictício</span>
+              </div>
+            ` : est.verifiedByCommunity ? `
               <div class="absolute bottom-2.5 left-2.5 z-10">
                 <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-600 text-white shadow-md">
-                  ✓ Verificado
+                  ✓ 3+ avaliações favoráveis
                 </span>
               </div>
             ` : ''}
@@ -442,22 +501,22 @@ class App {
                     ${est.name}
                   </h3>
                 </div>
-                <div class="text-right shrink-0">
+                ${isOsm || est.isSample ? '' : `<div class="text-right shrink-0">
                   <span class="inline-flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-50 px-2 py-1 rounded-md border border-amber-200">
                     ★ ${est.rating.toFixed(1)} <span class="text-[10px] text-slate-500 font-normal">(${est.reviewsCount})</span>
                   </span>
-                </div>
+                </div>`}
               </div>
 
               <p class="text-xs text-slate-500 mb-2 flex items-center gap-1">
                 <span>📍 ${est.address}</span>
-                <span>•</span>
-                <span class="font-semibold text-emerald-700">${est.distance ? est.distance.toFixed(1) + ' km' : ''}</span>
+                ${est.distance == null ? '' : `<span>•</span><span class="font-semibold text-emerald-700">${est.distance.toFixed(1)} km</span>`}
               </p>
 
               <p class="text-xs text-slate-600 line-clamp-2 mb-3">
                 ${est.description}
               </p>
+              ${isOsm ? '<p class="text-[11px] font-semibold text-amber-800 mb-3">Local do OpenStreetMap. Acessibilidade não verificada pelo AcessaAqui.</p>' : ''}
 
               <!-- Tags de Acessibilidade -->
               <div class="flex flex-wrap gap-1 mb-3">
@@ -479,30 +538,30 @@ class App {
 
             <!-- Botões de Ação -->
             <div class="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
-              <button 
+              ${isOsm ? '' : `<button 
                 type="button" 
                 class="btn-speak-summary text-xs text-slate-600 hover:text-blue-700 flex items-center gap-1.5 p-1 rounded hover:bg-slate-50 transition"
                 data-est-id="${est.id}"
                 title="Ouvir audiodescrição deste estabelecimento"
               >
                 🔊 <span>Ouvir resumo</span>
-              </button>
+              </button>`}
 
               <div class="flex items-center gap-2">
-                <button 
+                ${isOsm ? `<a class="text-xs font-bold text-white bg-slate-700 hover:bg-slate-800 px-3 py-1.5 rounded-lg shadow-sm transition" href="${est.osmUrl}" target="_blank" rel="noopener noreferrer">Abrir no OSM</a>` : `<button 
                   type="button" 
                   class="btn-focus-map text-xs font-medium text-slate-700 hover:text-blue-600 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 transition"
                   data-est-id="${est.id}"
                 >
                   Ver no Mapa
-                </button>
-                <button 
+                </button>`}
+                ${isOsm ? '' : `<button 
                   type="button" 
                   class="btn-open-details text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg shadow-sm transition"
                   data-est-id="${est.id}"
                 >
                   Ver Detalhes
-                </button>
+                </button>`}
               </div>
             </div>
           </div>
@@ -569,9 +628,10 @@ class App {
     // Form de Nova Avaliação no Modal
     const formReview = document.getElementById('form-add-review');
     if (formReview) {
-      formReview.addEventListener('submit', (e) => {
+      formReview.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!this.currentEstablishmentModal) return;
+        if (this.currentEstablishmentModal.isSample) return;
 
         const author = document.getElementById('input-review-author')?.value.trim();
         const role = document.getElementById('input-review-role')?.value.trim();
@@ -583,7 +643,7 @@ class App {
           return;
         }
 
-        addReview(this.currentEstablishmentModal.id, {
+        await addReview(this.currentEstablishmentModal.id, {
           author: author || 'Membro da Comunidade',
           authorRole: role || 'Visitante',
           rating: Number(rating) || 5,
@@ -592,7 +652,7 @@ class App {
 
         alert('Sua avaliação foi enviada com sucesso! Muito obrigado por contribuir com a inclusão.');
         formReview.reset();
-        this.openEstablishmentModal(this.currentEstablishmentModal.id);
+        await this.openEstablishmentModal(this.currentEstablishmentModal.id);
         this.render(); // atualiza notas na listagem
       });
     }
@@ -604,14 +664,14 @@ class App {
         if (!this.currentEstablishmentModal) return;
         const est = this.currentEstablishmentModal;
         const featsList = (est.features || []).map(f => ACCESSIBILITY_FEATURES[f]?.label).filter(Boolean).join('. ');
-        const speechText = `Detalhes de acessibilidade de ${est.name}. Localizado em ${est.address}. ${est.description}. Recursos certificados: ${featsList}. Selo atual: ${est.scoreData?.tier?.name}.`;
+        const speechText = `Detalhes de acessibilidade de ${est.name}. Localizado em ${est.address}. ${est.description}. Recursos informados: ${featsList}. Classificação calculada pela plataforma: ${est.scoreData?.tier?.name}.`;
         this.a11y.speak(speechText);
       });
     }
   }
 
-  openEstablishmentModal(establishmentId) {
-    const est = getEstablishmentById(establishmentId);
+  async openEstablishmentModal(establishmentId) {
+    const est = await getEstablishmentById(establishmentId);
     if (!est) return;
 
     this.currentEstablishmentModal = est;
@@ -619,14 +679,20 @@ class App {
     if (!modal) return;
 
     const tier = est.scoreData?.tier || BADGE_TIERS.INICIANTE;
-    const reviews = getReviews(est.id);
+    const reviews = await getReviews(est.id);
 
     // Preenche dados principais
-    document.getElementById('modal-est-name').textContent = est.name;
-    document.getElementById('modal-est-category').textContent = `${this.mapManager.getCategoryEmoji(est.category)} ${est.category}`;
-    document.getElementById('modal-est-address').textContent = `📍 ${est.address} - ${est.city}/${est.state}`;
-    document.getElementById('modal-est-description').textContent = est.description;
-    document.getElementById('modal-est-rating').textContent = `★ ${est.rating.toFixed(1)} (${est.reviewsCount} avaliações)`;
+    document.getElementById('modal-est-name').innerHTML = est.name;
+    document.getElementById('modal-est-category').innerHTML = `${this.mapManager.getCategoryEmoji(est.category)} ${est.category}`;
+    document.getElementById('modal-est-address').innerHTML = `📍 ${est.address} - ${est.city}/${est.state}`;
+    document.getElementById('modal-est-description').innerHTML = est.description;
+    document.getElementById('modal-est-rating').textContent = est.isSample
+      ? 'Exemplo fictício • sem avaliações reais'
+      : `★ ${est.rating.toFixed(1)} (${est.reviewsCount} avaliações)`;
+    document.getElementById('sample-establishment-notice')?.classList.toggle('hidden', !est.isSample);
+    document.getElementById('form-add-review')?.classList.toggle('hidden', Boolean(est.isSample));
+    document.getElementById('btn-toggle-report-barrier')?.classList.toggle('hidden', Boolean(est.isSample));
+    if (est.isSample) document.getElementById('box-form-report-barrier')?.classList.add('hidden');
 
     const imgEl = document.getElementById('modal-est-image');
     if (imgEl) {
@@ -655,7 +721,7 @@ class App {
       badgeContainer.innerHTML = `
         <div class="p-4 rounded-xl text-white ${tier.badgeClass} flex items-center justify-between shadow-md">
           <div>
-            <div class="text-xs uppercase tracking-wider font-semibold opacity-90">Classificação Oficial</div>
+            <div class="text-xs uppercase tracking-wider font-semibold opacity-90">Classificação AcessaAqui</div>
             <div class="text-lg font-bold">${tier.name}</div>
             <p class="text-xs opacity-90 mt-0.5">${tier.description}</p>
           </div>
@@ -739,6 +805,7 @@ class App {
       }
     }
 
+    await this.renderModalBarriers(est.id);
     modal.classList.remove('hidden');
     this.a11y.announce(`Abrindo detalhes de ${est.name}`);
   }
@@ -898,32 +965,35 @@ class App {
     // Formulário de Cadastro
     const formRegister = document.getElementById('form-register-establishment');
     if (formRegister) {
-      formRegister.addEventListener('submit', (e) => {
+      formRegister.addEventListener('submit', async (e) => {
         e.preventDefault();
 
         const name = document.getElementById('input-reg-name')?.value.trim();
         const category = document.getElementById('select-reg-category')?.value;
         const address = document.getElementById('input-reg-address')?.value.trim();
-        const city = document.getElementById('input-reg-city')?.value.trim() || 'São Paulo';
-        const state = document.getElementById('input-reg-state')?.value.trim() || 'SP';
+        const city = document.getElementById('input-reg-city')?.value.trim() || '';
+        const state = document.getElementById('input-reg-state')?.value.trim() || '';
         const phone = document.getElementById('input-reg-phone')?.value.trim();
         const whatsapp = document.getElementById('input-reg-whatsapp')?.value.trim();
         const website = document.getElementById('input-reg-website')?.value.trim();
         const description = document.getElementById('textarea-reg-description')?.value.trim();
         const plan = document.getElementById('select-reg-plan')?.value || 'Gratuito';
 
-        let lat = parseFloat(document.getElementById('input-reg-lat')?.value);
-        let lng = parseFloat(document.getElementById('input-reg-lng')?.value);
-
-        if (isNaN(lat) || isNaN(lng)) {
-          // Usa ponto próximo ao centro com ligeira variação aleatória para não sobrepor
-          lat = -23.561414 + (Math.random() - 0.5) * 0.02;
-          lng = -46.655881 + (Math.random() - 0.5) * 0.02;
+        const latValue = document.getElementById('input-reg-lat')?.value.trim() || '';
+        const lngValue = document.getElementById('input-reg-lng')?.value.trim() || '';
+        if (Boolean(latValue) !== Boolean(lngValue)) {
+          alert('Preencha latitude e longitude juntas ou deixe as duas vazias para localizar pelo endereço.');
+          return;
         }
-
+        const lat = latValue ? Number(latValue) : undefined;
+        const lng = lngValue ? Number(lngValue) : undefined;
+        if (latValue && (!Number.isFinite(lat) || lat < -90 || lat > 90 || !Number.isFinite(lng) || lng < -180 || lng > 180)) {
+          alert('Confira as coordenadas antes de salvar.');
+          return;
+        }
         const checkedFeatures = Array.from(document.querySelectorAll('input[name="register_feature"]:checked')).map(el => el.value);
 
-        const newEst = addEstablishment({
+        const newEst = await addEstablishment({
           name,
           category,
           address,
@@ -936,8 +1006,7 @@ class App {
           partnershipPlan: plan,
           lat,
           lng,
-          features: checkedFeatures,
-          image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800'
+          features: checkedFeatures
         });
 
         alert(`Estabelecimento "${newEst.name}" cadastrado com sucesso! Foi classificado como: ${newEst.scoreData?.tier?.name}.`);
@@ -970,52 +1039,38 @@ class App {
     }
   }
 
-  // ======================= GESTÃO DE DADOS (IMPORT/EXPORT/RESET) ======================= //
-  setupDataManagement() {
-    const btnReset = document.getElementById('btn-reset-demo-data');
-    if (btnReset) {
-      btnReset.addEventListener('click', () => {
-        if (confirm('Deseja restaurar todos os dados para o padrão de demonstração original?')) {
-          resetAllData();
-          alert('Dados restaurados com sucesso!');
-          location.reload();
-        }
-      });
-    }
+  // ======================= BARREIRAS REPORTADAS ======================= //
+  async renderModalBarriers(estId) {
+    const box = document.getElementById('modal-est-barriers-list');
+    if (!box) return;
+    const list = await getBarriers(estId);
+    box.innerHTML = list.length ? list.map(b => `
+      <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs">
+        <div class="font-bold text-amber-900">${b.title} <span class="font-normal text-amber-700">(${b.barrierType})</span></div>
+        <p class="text-amber-800 mt-0.5">${b.description}</p>
+        <div class="text-[10px] text-amber-700 mt-1">Reportado por ${b.author} em ${b.date} • ${b.status}</div>
+      </div>`).join('') : '<div class="text-xs text-slate-500 py-2">Nenhuma barreira reportada para este local.</div>';
+  }
 
-    const btnExport = document.getElementById('btn-export-data');
-    if (btnExport) {
-      btnExport.addEventListener('click', () => {
-        const json = exportAllData();
-        const blob = new Blob([json], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `acessaaqui_dados_${new Date().toISOString().split('T')[0]}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
+  setupBarrierForm() {
+    const box = document.getElementById('box-form-report-barrier');
+    const form = document.getElementById('form-report-barrier');
+    document.getElementById('btn-toggle-report-barrier')?.addEventListener('click', () => box?.classList.toggle('hidden'));
+    document.getElementById('btn-cancel-barrier')?.addEventListener('click', () => box?.classList.add('hidden'));
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!this.currentEstablishmentModal) return;
+      await addBarrier(this.currentEstablishmentModal.id, {
+        author: document.getElementById('input-barrier-author')?.value.trim(),
+        barrierType: document.getElementById('select-barrier-type')?.value,
+        title: document.getElementById('input-barrier-title')?.value.trim(),
+        description: document.getElementById('textarea-barrier-desc')?.value.trim()
       });
-    }
-
-    const inputImport = document.getElementById('input-import-data');
-    if (inputImport) {
-      inputImport.addEventListener('change', (e) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const content = event.target?.result;
-          if (content && importAllData(content)) {
-            alert('Dados importados com sucesso!');
-            location.reload();
-          } else {
-            alert('Falha ao importar o arquivo. Verifique o formato JSON.');
-          }
-        };
-        reader.readAsText(file);
-      });
-    }
+      form.reset();
+      box?.classList.add('hidden');
+      await this.renderModalBarriers(this.currentEstablishmentModal.id);
+      this.a11y.announce('Barreira reportada com sucesso.');
+    });
   }
 
   // ======================= BARRA DE ACESSIBILIDADE DIGITAL ======================= //
@@ -1068,9 +1123,7 @@ class App {
     }
   }
 }
-
 // Inicializa a aplicação quando o DOM estiver pronto
 document.addEventListener('DOMContentLoaded', () => {
   window.AcessaAquiApp = new App();
 });
-

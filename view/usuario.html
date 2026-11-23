@@ -187,9 +187,12 @@
 
     <!-- ==================== ABA 1: EXPLORAR (MAPA & LISTA) ==================== -->
     <section id="panel-explore" class="tab-panel flex-1 flex flex-col overflow-hidden min-h-0 w-full" role="tabpanel" aria-labelledby="tab-btn-explore">
+      <div class="shrink-0 bg-amber-50 border-b border-amber-200 px-4 py-2 text-center text-xs text-amber-900">
+        Os recursos de acessibilidade são informados pelos estabelecimentos e podem mudar. Confirme detalhes diretamente com o local antes de visitar.
+      </div>
       
       <!-- Barra Superior de Busca e Filtros Inteligentes (Fixa no topo do painel) -->
-      <div class="bg-white border-b border-slate-200 py-3 px-4 sm:px-6 shadow-xs shrink-0 z-20">
+      <div class="bg-white border-b border-slate-200 py-3 px-4 sm:px-6 shadow-xs shrink-0 z-20" id="div-subHeader">
         <div class="max-w-7xl mx-auto space-y-3">
           
           <!-- Linha 1: Input de Busca + Cidade + Localização + Ordenação -->
@@ -233,7 +236,7 @@
             </div>
 
             <!-- Botão GPS Atual -->
-            <div class="md:col-span-2 flex gap-1.5">
+            <div class="md:col-span-2 flex flex-col gap-1.5">
               <button 
                 type="button" 
                 id="btn-use-geolocation"
@@ -244,8 +247,10 @@
                 <span>Meu GPS</span>
               </button>
             </div>
-
           </div>
+          <p class="text-[10px] text-slate-500">Ao usar Meu GPS, o navegador pedirá sua autorização. As coordenadas do GPS ou da região selecionada são consultadas no Overpass/OpenStreetMap e não são salvas pelo AcessaAqui.</p>
+          <p id="nearby-places-status" class="text-xs text-slate-600 min-h-4" aria-live="polite"></p>
+          <p class="text-[10px] text-slate-500">Dados de locais: © <a class="underline" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>, licença ODbL. Os dados de acessibilidade dos locais listados pelo OSM não foram verificados pelo AcessaAqui.</p>
 
           <!-- Linha 2: Chips de Filtros Rápidos de Acessibilidade & Smart Match -->
           <div class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100">
@@ -274,6 +279,19 @@
           </div>
 
         </div>
+      </div>
+      <div class="shrink-0 flex justify-center border-b border-slate-200 bg-slate-50/80 px-4 py-1.5">
+        <button
+          type="button"
+          id="btn-subHeader"
+          class="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
+          aria-controls="div-subHeader"
+          aria-expanded="true"
+          title="Oculta os filtros para ampliar o espaço de visualização dos locais."
+        >
+          <span id="subHeader-toggle-icon" aria-hidden="true">⌃</span>
+          <span id="subHeader-toggle-label">Ocultar filtros de busca</span>
+        </button>
       </div>
 
       <!-- Área de Resultados (Mapa Estático + Lista com Scroll Independente) -->
@@ -416,7 +434,7 @@
             Cadastrar Novo Estabelecimento Acessível
           </h2>
           <p class="text-xs sm:text-sm text-slate-600 mt-1">
-            O cadastro básico é <strong>100% gratuito</strong>. Informe com transparência os recursos disponíveis para que o sistema calcule automaticamente a certificação de inclusão do seu local.
+            O cadastro de unidades é gratuito nesta versão. Informe os recursos disponíveis para consultar a classificação interna calculada pela plataforma.
           </p>
         </div>
 
@@ -459,6 +477,19 @@
             </div>
           </div>
 
+          <fieldset class="rounded-xl border border-slate-200 p-4">
+            <legend class="px-1 text-xs font-bold text-slate-700">Localização no mapa (opcional)</legend>
+            <p class="mb-3 text-xs text-slate-500">Informe latitude e longitude para posicionar o local no mapa. Sem coordenadas, ele continua disponível na lista.</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label class="text-xs font-semibold text-slate-700" for="input-reg-lat">Latitude
+                <input type="number" step="any" min="-90" max="90" id="input-reg-lat" class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" placeholder="Ex.: -23.561414" />
+              </label>
+              <label class="text-xs font-semibold text-slate-700" for="input-reg-lng">Longitude
+                <input type="number" step="any" min="-180" max="180" id="input-reg-lng" class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" placeholder="Ex.: -46.655881" />
+              </label>
+            </div>
+          </fieldset>
+
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label for="input-reg-phone" class="block text-xs font-bold text-slate-700 uppercase mb-1">Telefone Fixo</label>
@@ -471,13 +502,11 @@
             </div>
 
             <div>
-              <label for="select-reg-plan" class="block text-xs font-bold text-slate-700 uppercase mb-1">Plano de Participação</label>
+              <label for="select-reg-plan" class="block text-xs font-bold text-slate-700 uppercase mb-1">Participação</label>
               <select id="select-reg-plan" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white">
-                <option value="Gratuito">Básico Gratuito (Selo padrão)</option>
-                <option value="Empresa Inclusiva Prata">Prata (Destaque na busca)</option>
-                <option value="Empresa Inclusiva Ouro">Ouro (Consultoria e Relatório)</option>
-                <option value="Empresa Inclusiva Diamante">Diamante (Certificação de Excelência)</option>
+                <option value="Gratuito">Cadastro gratuito</option>
               </select>
+              <p class="mt-1 text-[11px] text-slate-500">Planos pagos ainda não estão disponíveis.</p>
             </div>
           </div>
 
@@ -601,9 +630,9 @@
         <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-5 flex items-start gap-3">
           <span class="text-2xl">🛡️</span>
           <div>
-            <h4 class="text-sm font-bold text-emerald-950">Validação Colaborativa ("Selo Verificado pela Comunidade")</h4>
+            <h4 class="text-sm font-bold text-emerald-950">Avaliações favoráveis da comunidade</h4>
             <p class="text-xs text-emerald-900 mt-1 leading-relaxed">
-              Quando um local acumula 3 ou mais avaliações positivas de usuários confirmando as condições reais do espaço, ele ganha a insígnia <strong>✓ Verificado pela Comunidade</strong>, garantindo máxima confiabilidade para as pessoas que dependem dessas adaptações.
+              Quando um local acumula 3 ou mais avaliações com nota 4 ou 5, a plataforma destaca essa contagem. As avaliações são relatos de usuários e não constituem inspeção ou garantia das condições do local.
             </p>
           </div>
         </div>
@@ -624,7 +653,7 @@
             Como o Programa se Mantém e Expande
           </h2>
           <p class="text-xs sm:text-sm text-slate-600 mt-2 leading-relaxed">
-            A plataforma opera em um modelo híbrido de negócio social: acesso <strong>sempre gratuito para pessoas com deficiência e famílias</strong>, viabilizado por convênios públicos, planos de posicionamento comercial para empresas e patrocínios de responsabilidade social (ESG).
+            A navegação, as buscas, as avaliações e os avisos comunitários são gratuitos para clientes. Os planos e simulações de parceria são exclusivos para empresas, no portal empresarial.
           </p>
 
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
@@ -640,7 +669,7 @@
               <span class="text-xl">💼</span>
               <h4 class="font-bold text-sm text-slate-800 mt-2">Planos Corporativos & ESG</h4>
               <p class="text-xs text-slate-500 mt-1">
-                Assinaturas corporativas para redes varejistas e hotelaria com relatórios diagnósticos de acessibilidade, treinamentos de equipe em Libras e destaque nas buscas.
+                Possibilidades futuras de apoio empresarial, formação em acessibilidade e divulgação inclusiva.
               </p>
             </div>
 
@@ -651,38 +680,6 @@
                 Colaboração científica com cursos de arquitetura e tecnologia assistiva para aprimoramento contínuo dos critérios de usabilidade.
               </p>
             </div>
-          </div>
-        </div>
-
-        <!-- Gestão dos Dados Locais (LocalStorage Management) -->
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
-          <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Armazenamento Local (LocalStorage)</span>
-          <h3 class="text-base font-bold text-slate-900 mt-1">Gerenciador de Dados do Protótipo</h3>
-          <p class="text-xs text-slate-600 mt-1 mb-4">
-            Todas as alterações (novos estabelecimentos, avaliações enviadas e configurações de perfil) estão sendo persistidas no seu navegador. Você pode exportar, importar backups ou restaurar a demonstração inicial.
-          </p>
-
-          <div class="flex flex-wrap items-center gap-3">
-            <button 
-              type="button" 
-              id="btn-export-data"
-              class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition"
-            >
-              <span>📥</span> <span>Exportar Backup (JSON)</span>
-            </button>
-
-            <label class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer border border-slate-300 transition">
-              <span>📤</span> <span>Importar Backup (JSON)</span>
-              <input type="file" id="input-import-data" accept=".json" class="hidden" />
-            </label>
-
-            <button 
-              type="button" 
-              id="btn-reset-demo-data"
-              class="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-bold flex items-center gap-1.5 transition"
-            >
-              <span>🔄</span> <span>Restaurar Dados Originais de Demonstração</span>
-            </button>
           </div>
         </div>
 
@@ -746,7 +743,7 @@
       <!-- Corpo com Rolagem -->
       <div class="p-5 sm:p-6 overflow-y-auto custom-scrollbar space-y-6">
         
-        <!-- Foto de Capa & Selo Oficial (100% preenchida sem sobras cinzas) -->
+        <!-- Foto de capa e classificação interna -->
         <div class="grid grid-cols-1 sm:grid-cols-12 gap-4 items-stretch">
           <div class="sm:col-span-5 h-52 sm:h-auto min-h-[190px] rounded-xl overflow-hidden bg-slate-200 shadow-inner relative self-stretch">
             <img id="modal-est-image" src="" alt="" class="w-full h-full absolute inset-0 object-cover" />
@@ -778,19 +775,10 @@
               target="_blank" 
               rel="noopener noreferrer" 
               class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg font-bold shadow-xs transition"
-              title="Abrir rota acessível no mapa"
+              title="Abrir rota no Google Maps; a rota não indica condições de acessibilidade"
             >
               <span>🗺️</span> <span>Como Chegar</span>
             </a>
-
-            <button 
-              type="button" 
-              id="modal-est-certificate-btn" 
-              class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-bold shadow-xs transition"
-              title="Visualizar e imprimir selo e certificado oficial"
-            >
-              <span>🏅</span> <span>Selo & Certificado</span>
-            </button>
 
             <a 
               id="modal-est-whatsapp-btn" 
@@ -807,7 +795,7 @@
         <!-- Grade de Recursos Detalhados de Acessibilidade -->
         <div>
           <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
-            Status dos Itens de Acessibilidade Certificados
+            Recursos de acessibilidade informados pelo estabelecimento
           </h3>
           <div id="modal-est-features-list">
             <!-- Inserido dinamicamente via JS -->
@@ -824,6 +812,7 @@
           <div id="modal-est-reviews-list" class="space-y-2 mb-4">
             <!-- Inserido via JS -->
           </div>
+          <p id="sample-establishment-notice" class="hidden mb-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-900">Este é um estabelecimento fictício criado apenas para mostrar o funcionamento do site. Avaliações e avisos estão desativados para este exemplo.</p>
 
           <!-- Formulário para Adicionar Avaliação -->
           <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 mt-4">
@@ -979,23 +968,10 @@
   </div>
 
   <!-- =============================== RODAPÉ =============================== -->
-  <footer class="bg-slate-900 text-slate-300 py-8 border-t border-slate-800 mt-auto">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-xs leading-relaxed">
-      <div class="flex flex-col md:flex-row items-center justify-between gap-4">
-        <div>
-          <div class="font-bold text-white text-sm flex items-center gap-2">
-            <span>♿ AcessaAqui</span>
-            <span class="text-[11px] font-normal text-slate-400">— Plataforma Digital de Inclusão e Acessibilidade</span>
-          </div>
-          <p class="text-slate-400 mt-1 max-w-xl">
-            Promovendo autonomia, transparência e respeito à diversidade humana em conformidade com a Lei Brasileira de Inclusão (Lei nº 13.146/2015) e normas ABNT NBR 9050.
-          </p>
-        </div>
-        <div class="text-slate-400 text-right">
-          <p>Armazenamento local ativo • Protótipo 100% Funcional</p>
-          <p class="text-[11px] text-slate-500 mt-0.5">Disponível para Web e Dispositivos Móveis</p>
-        </div>
-      </div>
+  <footer class="mt-auto bg-slate-900 text-slate-300 py-2 border-t border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-[11px] flex flex-col sm:flex-row items-center justify-between gap-1.5">
+      <span class="font-bold text-white">♿ AcessaAqui <span class="font-normal text-slate-400">• Guia inclusivo de locais</span></span>
+      <span class="text-slate-400">Versão local • Os dados não são sincronizados</span>
     </div>
   </footer>
 

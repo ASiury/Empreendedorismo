@@ -9,7 +9,9 @@ export class MapManager {
     this.markersLayer = null;
     this.markersById = new Map();
     this.userMarker = null;
-    this.userLocation = { lat: -23.561414, lng: -46.655881 }; // Centro padrão (Av. Paulista, SP)
+    this.defaultLocation = { lat: -23.561414, lng: -46.655881 }; // Centro inicial, sem afirmar que é a posição do visitante
+    this.userLocation = null; // Coordenadas GPS, apenas após autorização do navegador
+    this.referenceLocation = this.defaultLocation; // Região inicial escolhida no seletor (Paulista)
     this.pickerMarker = null;
     this.isPickerMode = false;
     this.onLocationPicked = null;
@@ -25,7 +27,7 @@ export class MapManager {
     }
 
     this.map = L.map(this.containerId, {
-      center: [this.userLocation.lat, this.userLocation.lng],
+      center: [this.defaultLocation.lat, this.defaultLocation.lng],
       zoom: 14,
       zoomControl: false,
       keyboard: true
@@ -55,7 +57,7 @@ export class MapManager {
   }
 
   updateUserMarker() {
-    if (!this.map) return;
+    if (!this.map || !this.userLocation) return;
 
     if (this.userMarker) {
       this.userMarker.setLatLng([this.userLocation.lat, this.userLocation.lng]);
@@ -90,13 +92,16 @@ export class MapManager {
     if (establishments.length === 0) return;
 
     const bounds = L.latLngBounds();
-    bounds.extend([this.userLocation.lat, this.userLocation.lng]);
+    if (this.referenceLocation) bounds.extend([this.referenceLocation.lat, this.referenceLocation.lng]);
 
     establishments.forEach(est => {
-      if (!est.lat || !est.lng) return;
+      if (est.lat == null || est.lng == null || !Number.isFinite(Number(est.lat)) || !Number.isFinite(Number(est.lng))) return;
 
-      const tier = est.scoreData?.tier || BADGE_TIERS.INICIANTE;
-      const dist = this.calculateDistance(this.userLocation.lat, this.userLocation.lng, est.lat, est.lng);
+      const isOsm = est.source === 'osm';
+      const tier = isOsm ? { id: 'osm', color: '#64748b', name: 'OpenStreetMap' } : (est.scoreData?.tier || BADGE_TIERS.INICIANTE);
+      const dist = this.referenceLocation
+        ? this.calculateDistance(this.referenceLocation.lat, this.referenceLocation.lng, Number(est.lat), Number(est.lng))
+        : null;
 
       // Ícone estilizado com a cor do selo
       const markerHtml = `
@@ -122,24 +127,33 @@ export class MapManager {
       });
 
       // Conteúdo do Popup Acessível
-      const popupHtml = `
+      const popupHtml = isOsm ? `
+        <div class="p-1 max-w-[240px]">
+          <div class="font-bold text-sm text-slate-900 leading-tight mb-1">${est.name}</div>
+          <div class="text-xs text-slate-500 mb-1.5">${est.category}${dist == null ? '' : ` • ${dist.toFixed(1)} km`}</div>
+          <div class="text-[11px] font-semibold text-amber-800 bg-amber-50 rounded px-2 py-1 mb-2">Acessibilidade não verificada pelo AcessaAqui</div>
+          <div class="text-xs text-slate-600 mb-2">${est.address}</div>
+          <a class="block text-center py-1.5 px-2 bg-slate-700 hover:bg-slate-800 text-white rounded text-xs font-semibold" href="${est.osmUrl}" target="_blank" rel="noopener noreferrer">Ver no OpenStreetMap</a>
+        </div>
+      ` : `
         <div class="p-1 max-w-[240px]">
           <div class="font-bold text-sm text-slate-900 leading-tight mb-1">${est.name}</div>
           <div class="text-xs text-slate-500 mb-1.5 flex items-center gap-1">
             <span>${this.getCategoryEmoji(est.category)} ${est.category}</span>
             <span>•</span>
-            <span class="font-medium text-emerald-700">${dist.toFixed(1)} km</span>
+            <span class="font-medium text-emerald-700">${dist == null ? '' : `${dist.toFixed(1)} km`}</span>
           </div>
           <div class="inline-block px-2 py-0.5 rounded text-[11px] font-semibold text-white mb-2" style="background-color: ${tier.color}">
             ${tier.name}
           </div>
+          ${est.isSample ? '<div class="text-[11px] font-bold text-rose-800 bg-rose-50 rounded px-2 py-1 mb-2">Exemplo fictício; não representa um local real</div>' : ''}
           <div class="text-xs text-slate-600 line-clamp-2 mb-2">
             ${est.description || est.address}
           </div>
           <button 
             type="button" 
             class="w-full text-center py-1.5 px-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold shadow transition-colors"
-            onclick="window.dispatchEvent(new CustomEvent('open-establishment-details', { detail: { id: '${est.id}' } }))"
+            data-est-id="${est.id}"
           >
             Ver Acessibilidade Completa
           </button>
@@ -147,8 +161,13 @@ export class MapManager {
       `;
 
       marker.bindPopup(popupHtml);
+      if (!isOsm) marker.on('popupopen', (event) => {
+        event.popup.getElement()?.querySelector('[data-est-id]')?.addEventListener('click', () => {
+          this.onMarkerClick?.(est);
+        });
+      });
 
-      marker.on('click', () => {
+      if (!isOsm) marker.on('click', () => {
         if (this.onMarkerClick) {
           this.onMarkerClick(est);
         }
@@ -160,7 +179,7 @@ export class MapManager {
     });
 
     // Ajusta mapa para abranger marcadores se houver algum
-    if (establishments.length > 0) {
+    if (this.markersById.size > 0) {
       this.map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
     }
   }
@@ -180,8 +199,8 @@ export class MapManager {
   }
 
   centerOnUser() {
-    if (!this.map) return;
-    this.map.flyTo([this.userLocation.lat, this.userLocation.lng], 15, {
+    if (!this.map || !this.referenceLocation) return;
+    this.map.flyTo([this.referenceLocation.lat, this.referenceLocation.lng], 15, {
       animate: true,
       duration: 1.0
     });
@@ -199,6 +218,7 @@ export class MapManager {
           lat: pos.coords.latitude,
           lng: pos.coords.longitude
         };
+        this.referenceLocation = this.userLocation;
         this.updateUserMarker();
         this.centerOnUser();
         if (onSuccess) onSuccess(this.userLocation);
@@ -212,8 +232,10 @@ export class MapManager {
   }
 
   setUserCoordinates(lat, lng) {
-    this.userLocation = { lat: Number(lat), lng: Number(lng) };
-    this.updateUserMarker();
+    this.referenceLocation = { lat: Number(lat), lng: Number(lng) };
+    this.userLocation = null;
+    if (this.userMarker && this.map) this.map.removeLayer(this.userMarker);
+    this.userMarker = null;
     this.centerOnUser();
   }
 
